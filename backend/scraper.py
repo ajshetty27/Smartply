@@ -73,7 +73,7 @@ class JobScraper:
             
             # Now navigate to the actual URL
             print(f"Navigating to job URL: {url}")
-            driver.get(url)
+            driver.get(url) 
         except Exception as e:
             print(f"Error in _add_cookies_to_driver: {e}")
             # Don't raise, let it continue with the current state
