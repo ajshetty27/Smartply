@@ -560,7 +560,7 @@ export function DashboardPage() {
         <PDFViewer
           open={pdfViewerOpen}
           onClose={() => setPdfViewerOpen(false)}
-          pdfUrl={`http://localhost:8000/api/resumes/${sessionId}/pdf`}
+          pdfUrl={`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/resumes/${sessionId}/pdf`}
           title={baseResume.filename}
         />
       )}
