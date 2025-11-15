@@ -9,6 +9,13 @@ An intelligent web application for automated cover letter generation powered by 
 
 ## Features
 
+### User Authentication & Security
+- **Secure Login System**: JWT-based authentication with bcrypt password hashing
+- **User Registration**: Create individual accounts with username, email, and password
+- **Protected Routes**: All application features require authentication
+- **Session Management**: Persistent login with secure token storage
+- **User Isolation**: Each user's data (jobs, resumes, cover letters) is completely separate
+
 ### Smart Cover Letter Generation
 - **AI-Powered Writing**: Uses OpenAI GPT-4 to generate compelling, personalized cover letters
 - **Resume Integration**: Automatically extracts and uses information from your uploaded resume
