@@ -22,6 +22,15 @@ export function PDFViewer({ open, onClose, pdfUrl, title }: PDFViewerProps) {
     setNumPages(numPages);
   }
 
+  // Get auth token for PDF fetch
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('smartply_auth_token');
+    if (token) {
+      return { 'Authorization': `Bearer ${token}` };
+    }
+    return {};
+  };
+
   function zoomIn() {
     setScale(prev => Math.min(prev + 0.1, 2.0));
   }
@@ -75,6 +84,9 @@ export function PDFViewer({ open, onClose, pdfUrl, title }: PDFViewerProps) {
             <div className="flex flex-col items-center gap-4 p-4">
               <Document
                 file={pdfUrl}
+                options={{
+                  httpHeaders: getAuthHeaders(),
+                }}
                 onLoadSuccess={onDocumentLoadSuccess}
                 loading={
                   <div className="text-gray-400 flex items-center justify-center h-full">Loading PDF...</div>

@@ -71,7 +71,8 @@ async def get_profile(
             full_name=None,
             email=None,
             phone=None,
-            location=None
+            location=None,
+            additional_information=None
         )
     
     return profile
