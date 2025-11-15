@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from datetime import datetime
 from database import Base
 
@@ -6,6 +6,7 @@ class UserProfile(Base):
     __tablename__ = "user_profiles"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=True)  # Nullable for backward compatibility
     session_id = Column(String, unique=True, index=True)
     full_name = Column(String, nullable=True)
     email = Column(String, nullable=True)

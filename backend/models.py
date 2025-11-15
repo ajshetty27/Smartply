@@ -6,6 +6,7 @@ class Job(Base):
     __tablename__ = "jobs"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=True)  # Nullable for backward compatibility - will add ForeignKey later
     session_id = Column(String, index=True)  # Simple session management for now
     url = Column(String, nullable=True)  # Nullable for manual text input
     source = Column(String)  # "linkedin", "indeed", or "manual"

@@ -7,6 +7,7 @@ class Resume(Base):
     __tablename__ = "resumes"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Nullable for backward compatibility
     session_id = Column(String, index=True)
     filename = Column(String)
     content = Column(Text)  # Extracted text from PDF
@@ -19,6 +20,7 @@ class CoverLetter(Base):
     __tablename__ = "cover_letters"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Nullable for backward compatibility
     job_id = Column(Integer, ForeignKey("jobs.id"))
     resume_id = Column(Integer, ForeignKey("resumes.id"))
     session_id = Column(String, index=True)
