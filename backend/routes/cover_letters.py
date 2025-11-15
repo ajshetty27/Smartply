@@ -10,6 +10,7 @@ from database import get_db
 from models_extended import Resume, CoverLetter
 from models import Job
 from models_profile import UserProfile
+from models_user import User
 from schemas_extended import ResumeResponse, CoverLetterGenerate, CoverLetterResponse
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -18,6 +19,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.enums import TA_LEFT
+from auth import get_current_user
 
 load_dotenv()
 
@@ -40,7 +42,8 @@ def extract_text_from_pdf(file_content: bytes) -> str:
 async def upload_resume(
     session_id: str = Form(...),
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Upload and parse a resume PDF"""
     if not file.filename.endswith('.pdf'):
@@ -56,9 +59,10 @@ async def upload_resume(
         if not resume_text:
             raise HTTPException(status_code=400, detail="Could not extract text from PDF")
         
-        # Save resume to database with PDF content
+        # Save resume to database with PDF content and user_id
         resume = Resume(
             session_id=session_id,
+            user_id=current_user.id,
             filename=file.filename,
             content=resume_text,
             pdf_content=content  # Store raw PDF bytes
@@ -74,27 +78,46 @@ async def upload_resume(
         raise HTTPException(status_code=500, detail=f"Error processing resume: {str(e)}")
 
 @router.get("/resumes/{session_id}", response_model=List[ResumeResponse])
-async def get_resumes(session_id: str, db: Session = Depends(get_db)):
+async def get_resumes(
+    session_id: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Get all resumes for a session"""
-    resumes = db.query(Resume).filter(Resume.session_id == session_id).order_by(Resume.uploaded_at.desc()).all()
+    resumes = db.query(Resume).filter(
+        Resume.session_id == session_id,
+        Resume.user_id == current_user.id
+    ).order_by(Resume.uploaded_at.desc()).all()
     return resumes
 
 @router.get("/resumes/{session_id}/base", response_model=ResumeResponse)
-async def get_base_resume(session_id: str, db: Session = Depends(get_db)):
+async def get_base_resume(
+    session_id: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Get the most recent resume as the base resume for a session"""
-    resume = db.query(Resume).filter(Resume.session_id == session_id).order_by(Resume.uploaded_at.desc()).first()
+    resume = db.query(Resume).filter(
+        Resume.session_id == session_id,
+        Resume.user_id == current_user.id
+    ).order_by(Resume.uploaded_at.desc()).first()
     if not resume:
         raise HTTPException(status_code=404, detail="No resume found")
     return resume
 
 @router.get("/resumes/{session_id}/pdf")
-async def get_resume_pdf(session_id: str, db: Session = Depends(get_db)):
+async def get_resume_pdf(
+    session_id: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Get the PDF file for the base resume"""
     import logging
     logger = logging.getLogger(__name__)
     
     resume = db.query(Resume).filter(
-        Resume.session_id == session_id
+        Resume.session_id == session_id,
+        Resume.user_id == current_user.id
     ).order_by(Resume.uploaded_at.desc()).first()
     
     logger.info(f"PDF request for session: {session_id}")
@@ -121,17 +144,24 @@ async def get_resume_pdf(session_id: str, db: Session = Depends(get_db)):
 @router.post("/cover-letters/generate", response_model=CoverLetterResponse)
 async def generate_cover_letter(
     data: CoverLetterGenerate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Generate a cover letter using GPT-5"""
     try:
-        # Get job details
-        job = db.query(Job).filter(Job.id == data.job_id).first()
+        # Get job details (verify it belongs to the user)
+        job = db.query(Job).filter(
+            Job.id == data.job_id,
+            Job.user_id == current_user.id
+        ).first()
         if not job:
             raise HTTPException(status_code=404, detail="Job not found")
         
-        # Get resume
-        resume = db.query(Resume).filter(Resume.id == data.resume_id).first()
+        # Get resume (verify it belongs to the user)
+        resume = db.query(Resume).filter(
+            Resume.id == data.resume_id,
+            Resume.user_id == current_user.id
+        ).first()
         if not resume:
             raise HTTPException(status_code=404, detail="Resume not found")
         
@@ -212,7 +242,8 @@ Use the candidate's name "{candidate_name}" in the closing signature, and includ
             resume_id=data.resume_id,
             session_id=data.session_id,
             content=cover_letter_content,
-            additional_prompt=data.additional_prompt
+            additional_prompt=data.additional_prompt,
+            user_id=current_user.id
         )
         
         db.add(cover_letter)
@@ -225,17 +256,31 @@ Use the candidate's name "{candidate_name}" in the closing signature, and includ
         raise HTTPException(status_code=500, detail=f"Error generating cover letter: {str(e)}")
 
 @router.get("/cover-letters/{cover_letter_id}", response_model=CoverLetterResponse)
-async def get_cover_letter(cover_letter_id: int, db: Session = Depends(get_db)):
+async def get_cover_letter(
+    cover_letter_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Get a specific cover letter"""
-    cover_letter = db.query(CoverLetter).filter(CoverLetter.id == cover_letter_id).first()
+    cover_letter = db.query(CoverLetter).filter(
+        CoverLetter.id == cover_letter_id,
+        CoverLetter.user_id == current_user.id
+    ).first()
     if not cover_letter:
         raise HTTPException(status_code=404, detail="Cover letter not found")
     return cover_letter
 
 @router.get("/cover-letters/job/{job_id}", response_model=List[CoverLetterResponse])
-async def get_cover_letters_for_job(job_id: int, db: Session = Depends(get_db)):
+async def get_cover_letters_for_job(
+    job_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Get all cover letters for a specific job"""
-    cover_letters = db.query(CoverLetter).filter(CoverLetter.job_id == job_id).order_by(CoverLetter.generated_at.desc()).all()
+    cover_letters = db.query(CoverLetter).filter(
+        CoverLetter.job_id == job_id,
+        CoverLetter.user_id == current_user.id
+    ).order_by(CoverLetter.generated_at.desc()).all()
     return cover_letters
 
 @router.post("/cover-letters/{cover_letter_id}/edit")
@@ -243,11 +288,15 @@ async def edit_cover_letter(
     cover_letter_id: int,
     selected_text: str = Form(...),
     instruction: str = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Edit a section of the cover letter using AI"""
     try:
-        cover_letter = db.query(CoverLetter).filter(CoverLetter.id == cover_letter_id).first()
+        cover_letter = db.query(CoverLetter).filter(
+            CoverLetter.id == cover_letter_id,
+            CoverLetter.user_id == current_user.id
+        ).first()
         if not cover_letter:
             raise HTTPException(status_code=404, detail="Cover letter not found")
         
@@ -303,16 +352,26 @@ async def edit_cover_letter(
         raise HTTPException(status_code=500, detail=f"Error editing cover letter: {str(e)}")
 
 @router.get("/cover-letters/{cover_letter_id}/pdf")
-async def download_cover_letter_pdf(cover_letter_id: int, db: Session = Depends(get_db)):
+async def download_cover_letter_pdf(
+    cover_letter_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Generate and download cover letter as PDF"""
     try:
         # Get cover letter
-        cover_letter = db.query(CoverLetter).filter(CoverLetter.id == cover_letter_id).first()
+        cover_letter = db.query(CoverLetter).filter(
+            CoverLetter.id == cover_letter_id,
+            CoverLetter.user_id == current_user.id
+        ).first()
         if not cover_letter:
             raise HTTPException(status_code=404, detail="Cover letter not found")
         
         # Get job details for filename
-        job = db.query(Job).filter(Job.id == cover_letter.job_id).first()
+        job = db.query(Job).filter(
+            Job.id == cover_letter.job_id,
+            Job.user_id == current_user.id
+        ).first()
         
         # Create PDF in memory
         buffer = io.BytesIO()

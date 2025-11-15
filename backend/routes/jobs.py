@@ -4,14 +4,21 @@ from typing import List
 from database import get_db
 from models import Job
 from models_linkedin import LinkedInCredentials
+from models_user import User
 from schemas import JobURLSubmit, JobManualSubmit, JobResponse
 from scraper import JobScraper
+from auth import get_current_user
 import asyncio
 
 router = APIRouter()
 
 @router.post("/jobs/url", response_model=JobResponse)
-async def submit_job_url(job_data: JobURLSubmit, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+async def submit_job_url(
+    job_data: JobURLSubmit, 
+    background_tasks: BackgroundTasks, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Submit a job URL for scraping"""
     try:
         # Get LinkedIn credentials if they exist
@@ -39,9 +46,10 @@ async def submit_job_url(job_data: JobURLSubmit, background_tasks: BackgroundTas
                 detail="LinkedIn scraping failed. Please use the 'Manual Entry' tab to copy and paste the job details directly."
             )
         
-        # Create job entry
+        # Create job entry with user_id
         job = Job(
             session_id=job_data.session_id,
+            user_id=current_user.id,
             url=job_data.url,
             source=scraped_data.get('source', 'unknown'),
             job_title=scraped_data['job_title'],
@@ -69,11 +77,16 @@ async def submit_job_url(job_data: JobURLSubmit, background_tasks: BackgroundTas
         raise HTTPException(status_code=500, detail=f"Error processing job: {error_msg}")
 
 @router.post("/jobs/manual", response_model=JobResponse)
-async def submit_job_manual(job_data: JobManualSubmit, db: Session = Depends(get_db)):
+async def submit_job_manual(
+    job_data: JobManualSubmit, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Submit a job manually with copy-pasted information"""
     try:
         job = Job(
             session_id=job_data.session_id,
+            user_id=current_user.id,
             url=None,
             source="manual",
             job_title=job_data.job_title,
@@ -93,28 +106,47 @@ async def submit_job_manual(job_data: JobManualSubmit, db: Session = Depends(get
         raise HTTPException(status_code=500, detail=f"Error saving job: {str(e)}")
 
 @router.get("/jobs/{session_id}", response_model=List[JobResponse])
-async def get_jobs(session_id: str, db: Session = Depends(get_db)):
+async def get_jobs(
+    session_id: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Get all jobs for a session"""
-    jobs = db.query(Job).filter(Job.session_id == session_id).order_by(Job.scraped_at.desc()).all()
+    jobs = db.query(Job).filter(
+        Job.session_id == session_id,
+        Job.user_id == current_user.id
+    ).order_by(Job.scraped_at.desc()).all()
     return jobs
 
 @router.get("/jobs/{session_id}/with-cover-letters", response_model=List[JobResponse])
-async def get_jobs_with_cover_letters(session_id: str, db: Session = Depends(get_db)):
+async def get_jobs_with_cover_letters(
+    session_id: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Get all jobs that have cover letters generated"""
     from models_extended import CoverLetter
     from sqlalchemy import exists
     
     jobs = db.query(Job).filter(
         Job.session_id == session_id,
+        Job.user_id == current_user.id,
         exists().where(CoverLetter.job_id == Job.id)
     ).order_by(Job.scraped_at.desc()).all()
     
     return jobs
 
 @router.delete("/jobs/{job_id}")
-async def delete_job(job_id: int, db: Session = Depends(get_db)):
+async def delete_job(
+    job_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Delete a job"""
-    job = db.query(Job).filter(Job.id == job_id).first()
+    job = db.query(Job).filter(
+        Job.id == job_id,
+        Job.user_id == current_user.id
+    ).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     

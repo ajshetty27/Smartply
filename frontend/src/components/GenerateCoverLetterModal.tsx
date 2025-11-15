@@ -11,6 +11,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Upload, FileText, Loader2, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiService } from '@/lib/api';
@@ -29,6 +37,11 @@ export function GenerateCoverLetterModal({ jobTitle, jobId }: GenerateCoverLette
   const [additionalPrompt, setAdditionalPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [loadingResume, setLoadingResume] = useState(true);
+  
+  // Cover letter configuration
+  const [numParagraphs, setNumParagraphs] = useState('3-4');
+  const [tone, setTone] = useState('professional');
+  const [length, setLength] = useState('medium');
 
   useEffect(() => {
     const checkExistingResume = async () => {
@@ -91,12 +104,23 @@ export function GenerateCoverLetterModal({ jobTitle, jobId }: GenerateCoverLette
         resumeId = existingResume.id;
       }
 
+      // Build configuration instructions
+      const configInstructions = [
+        `Structure the cover letter with ${numParagraphs} paragraphs.`,
+        `Use a ${tone} tone throughout.`,
+        `Keep the length ${length} (${length === 'short' ? 'concise and to the point' : length === 'medium' ? 'balanced and comprehensive' : 'detailed and thorough'}).`,
+      ].join(' ');
+      
+      const fullPrompt = additionalPrompt 
+        ? `${configInstructions}\n\nAdditional instructions: ${additionalPrompt}`
+        : configInstructions;
+
       // Generate cover letter
       const coverLetter = await apiService.generateCoverLetter({
         job_id: jobId,
         resume_id: resumeId,
         session_id: sessionId,
-        additional_prompt: additionalPrompt || undefined,
+        additional_prompt: fullPrompt,
       });
 
       // Navigate to cover letter view
@@ -222,6 +246,60 @@ export function GenerateCoverLetterModal({ jobTitle, jobId }: GenerateCoverLette
             )}
           </div>
 
+          {/* Cover Letter Configuration */}
+          <div className="space-y-4 p-4 border border-white/10 rounded-lg bg-white/5">
+            <h3 className="text-sm font-semibold text-white">Cover Letter Settings</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Number of Paragraphs */}
+              <div className="space-y-2">
+                <Label htmlFor="numParagraphs">Number of Paragraphs</Label>
+                <Select value={numParagraphs} onValueChange={setNumParagraphs}>
+                  <SelectTrigger id="numParagraphs">
+                    <SelectValue placeholder="Select paragraphs" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2-3">2-3 paragraphs</SelectItem>
+                    <SelectItem value="3-4">3-4 paragraphs</SelectItem>
+                    <SelectItem value="4-5">4-5 paragraphs</SelectItem>
+                    <SelectItem value="5-6">5-6 paragraphs</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Tone */}
+              <div className="space-y-2">
+                <Label htmlFor="tone">Tone</Label>
+                <Select value={tone} onValueChange={setTone}>
+                  <SelectTrigger id="tone">
+                    <SelectValue placeholder="Select tone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="professional">Professional</SelectItem>
+                    <SelectItem value="formal">Formal</SelectItem>
+                    <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
+                    <SelectItem value="conversational">Conversational</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Length */}
+              <div className="space-y-2">
+                <Label htmlFor="length">Length</Label>
+                <Select value={length} onValueChange={setLength}>
+                  <SelectTrigger id="length">
+                    <SelectValue placeholder="Select length" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="short">Short</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="long">Long</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
           {/* Additional Prompt */}
           <div className="space-y-2">
             <Label htmlFor="additionalPrompt">
@@ -229,7 +307,7 @@ export function GenerateCoverLetterModal({ jobTitle, jobId }: GenerateCoverLette
             </Label>
             <Textarea
               id="additionalPrompt"
-              placeholder="e.g., Emphasize my leadership experience, use a formal tone, mention my passion for the industry..."
+              placeholder="e.g., Emphasize my leadership experience, mention my passion for the industry..."
               value={additionalPrompt}
               onChange={(e) => setAdditionalPrompt(e.target.value)}
               rows={4}
