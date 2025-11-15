@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 import pdfplumber
 import os
+import io
 from datetime import datetime
 from database import get_db
 from models_extended import Resume, CoverLetter
@@ -12,6 +13,11 @@ from models_profile import UserProfile
 from schemas_extended import ResumeResponse, CoverLetterGenerate, CoverLetterResponse
 from openai import OpenAI
 from dotenv import load_dotenv
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.enums import TA_LEFT
 
 load_dotenv()
 
@@ -295,3 +301,73 @@ async def edit_cover_letter(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error editing cover letter: {str(e)}")
+
+@router.get("/cover-letters/{cover_letter_id}/pdf")
+async def download_cover_letter_pdf(cover_letter_id: int, db: Session = Depends(get_db)):
+    """Generate and download cover letter as PDF"""
+    try:
+        # Get cover letter
+        cover_letter = db.query(CoverLetter).filter(CoverLetter.id == cover_letter_id).first()
+        if not cover_letter:
+            raise HTTPException(status_code=404, detail="Cover letter not found")
+        
+        # Get job details for filename
+        job = db.query(Job).filter(Job.id == cover_letter.job_id).first()
+        
+        # Create PDF in memory
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            rightMargin=inch,
+            leftMargin=inch,
+            topMargin=inch,
+            bottomMargin=inch
+        )
+        
+        # Container for PDF elements
+        elements = []
+        
+        # Define styles
+        styles = getSampleStyleSheet()
+        normal_style = ParagraphStyle(
+            'CustomNormal',
+            parent=styles['Normal'],
+            fontSize=11,
+            leading=14,
+            alignment=TA_LEFT,
+            spaceAfter=12
+        )
+        
+        # Split content into paragraphs and add to PDF
+        paragraphs = cover_letter.content.split('\n')
+        for para in paragraphs:
+            if para.strip():  # Only add non-empty paragraphs
+                # Replace special characters that might cause issues
+                para_text = para.strip().replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                p = Paragraph(para_text, normal_style)
+                elements.append(p)
+                elements.append(Spacer(1, 0.1 * inch))
+        
+        # Build PDF
+        doc.build(elements)
+        
+        # Get PDF content
+        pdf_content = buffer.getvalue()
+        buffer.close()
+        
+        # Create filename
+        company_name = job.company_name.replace(' ', '_') if job else 'Company'
+        job_title = job.job_title.replace(' ', '_') if job else 'Position'
+        filename = f"CoverLetter_{company_name}_{job_title}.pdf"
+        
+        return Response(
+            content=pdf_content,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating PDF: {str(e)}")

@@ -24,6 +24,8 @@ export function CoverLetterViewPage() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [editingParagraphIndex, setEditingParagraphIndex] = useState<number | null>(null);
+  const [editedText, setEditedText] = useState('');
 
   useEffect(() => {
     const loadCoverLetter = async () => {
@@ -116,9 +118,66 @@ export function CoverLetterViewPage() {
     }
   };
 
-  const handleDownloadPDF = () => {
-    // TODO: Implement PDF download
-    console.log('Downloading PDF for job:', jobId);
+  const handleDownloadPDF = async () => {
+    if (!coverLetterId) {
+      toast({
+        title: 'Error',
+        description: 'No cover letter to download',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const blob = await apiService.downloadCoverLetterPDF(coverLetterId);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cover-letter-${jobId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: 'Success',
+        description: 'Cover letter downloaded successfully!',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to download PDF',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleParagraphClick = (index: number, text: string) => {
+    setEditingParagraphIndex(index);
+    setEditedText(text);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingParagraphIndex(null);
+    setEditedText('');
+  };
+
+  const handleSaveEdit = () => {
+    if (editingParagraphIndex === null) return;
+    
+    const paragraphs = coverLetterContent.split('\n\n');
+    paragraphs[editingParagraphIndex] = editedText;
+    setCoverLetterContent(paragraphs.join('\n\n'));
+    
+    setEditingParagraphIndex(null);
+    setEditedText('');
+    
+    toast({
+      title: 'Success',
+      description: 'Paragraph updated',
+    });
   };
 
   return (
@@ -157,9 +216,43 @@ export function CoverLetterViewPage() {
               }}
             >
               {coverLetterContent.split('\n\n').map((paragraph, index) => (
-                <p key={index} className="mb-4 text-gray-200">
-                  {paragraph}
-                </p>
+                <div key={index} className="mb-4">
+                  {editingParagraphIndex === index ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        value={editedText}
+                        onChange={(e) => setEditedText(e.target.value)}
+                        className="min-h-[100px] bg-white/5 border-white/20 text-white"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={handleSaveEdit}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleCancelEdit}
+                          className="border-white/20 text-white hover:bg-white/10"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p
+                      className="text-gray-200 cursor-pointer hover:bg-white/5 rounded px-2 py-1 transition-colors"
+                      onClick={() => handleParagraphClick(index, paragraph)}
+                      title="Click to edit"
+                    >
+                      {paragraph}
+                    </p>
+                  )}
+                </div>
               ))}
             </div>
           </Card>

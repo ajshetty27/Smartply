@@ -106,6 +106,8 @@ class AuthService {
 
   logout(): void {
     this.removeToken();
+    // Force a page reload to clear all state
+    window.location.href = '/login';
   }
 }
 

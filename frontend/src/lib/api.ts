@@ -193,6 +193,29 @@ class ApiService {
       body: JSON.stringify(data),
     });
   }
+
+  async downloadCoverLetterPDF(coverLetterId: number): Promise<Blob> {
+    const response = await fetch(`${API_BASE_URL}/cover-letters/${coverLetterId}/pdf`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to download PDF');
+    }
+
+    return response.blob();
+  }
+
+  getContentDispositionFilename(response: Response): string {
+    const contentDisposition = response.headers.get('Content-Disposition');
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (filenameMatch) {
+        return filenameMatch[1];
+      }
+    }
+    return 'cover-letter.pdf';
+  }
 }
 
 export const apiService = new ApiService();
