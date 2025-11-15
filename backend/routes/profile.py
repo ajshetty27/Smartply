@@ -28,6 +28,7 @@ async def create_or_update_profile(
             existing.email = data.email
             existing.phone = data.phone
             existing.location = data.location
+            existing.additional_information = data.additional_information
             profile = existing
         else:
             # Create new profile
@@ -37,6 +38,7 @@ async def create_or_update_profile(
                 email=data.email,
                 phone=data.phone,
                 location=data.location,
+                additional_information=data.additional_information,
                 user_id=current_user.id
             )
             db.add(profile)

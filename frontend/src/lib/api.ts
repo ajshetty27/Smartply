@@ -19,6 +19,7 @@ export interface UserProfile {
   email: string | null;
   phone: string | null;
   location: string | null;
+  additional_information: string | null;
 }
 
 export interface JobURLSubmit {
@@ -99,6 +100,7 @@ class ApiService {
 
     const response = await fetch(`${API_BASE_URL}/resumes/upload`, {
       method: 'POST',
+      headers: this.getAuthHeaders(),
       body: formData,
     });
 
@@ -145,6 +147,7 @@ class ApiService {
 
     const response = await fetch(`${API_BASE_URL}/cover-letters/${coverLetterId}/edit`, {
       method: 'POST',
+      headers: this.getAuthHeaders(),
       body: formData,
     });
 

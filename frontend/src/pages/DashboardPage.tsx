@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -30,6 +31,7 @@ export function DashboardPage() {
     email: '',
     phone: '',
     location: '',
+    additional_information: '',
   });
   const [savingProfile, setSavingProfile] = useState(false);
 
@@ -74,6 +76,7 @@ export function DashboardPage() {
           email: userProfile.email || '',
           phone: userProfile.phone || '',
           location: userProfile.location || '',
+          additional_information: userProfile.additional_information || '',
         });
       }
     } catch (error) {
@@ -267,6 +270,20 @@ export function DashboardPage() {
                         onChange={(e) => setProfileForm({ ...profileForm, location: e.target.value })}
                         placeholder="San Francisco, CA"
                         className="bg-white/5 border-white/10 text-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="additional_information" className="text-gray-300">
+                        Additional Information
+                        <span className="text-gray-500 text-xs ml-2">(Used as context for cover letter generation)</span>
+                      </Label>
+                      <Textarea
+                        id="additional_information"
+                        value={profileForm.additional_information}
+                        onChange={(e) => setProfileForm({ ...profileForm, additional_information: e.target.value })}
+                        placeholder="e.g., Career goals, key achievements, specific skills to highlight, industry preferences..."
+                        className="bg-white/5 border-white/10 text-white min-h-[100px]"
+                        rows={4}
                       />
                     </div>
                     <Button

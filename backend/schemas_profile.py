@@ -7,6 +7,7 @@ class UserProfileCreate(BaseModel):
     email: Optional[str] = None
     phone: Optional[str] = None
     location: Optional[str] = None
+    additional_information: Optional[str] = None
 
 class UserProfileResponse(BaseModel):
     id: int
@@ -15,6 +16,7 @@ class UserProfileResponse(BaseModel):
     email: Optional[str]
     phone: Optional[str]
     location: Optional[str]
+    additional_information: Optional[str]
     
     class Config:
         from_attributes = True
