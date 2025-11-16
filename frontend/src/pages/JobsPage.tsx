@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { apiService } from '@/lib/api';
 import type { Job } from '@/lib/api';
-import { Loader2, Settings, CheckCircle2, Plus, LayoutGrid, List, Briefcase, MapPin, ExternalLink, Trash2, Wand2, FileText, Eye, X } from 'lucide-react';
+import { Loader2, Settings, CheckCircle2, Plus, LayoutGrid, List, Briefcase, MapPin, ExternalLink, Trash2, Wand2, FileText, Eye, X, Search } from 'lucide-react';
 
 type ViewMode = 'table' | 'grid';
 
@@ -57,7 +57,8 @@ export function JobsPage() {
 
   const loadJobs = async () => {
     try {
-      const fetchedJobs = await apiService.getJobs(sessionId);
+      // Load all jobs for the user (including Scout jobs)
+      const fetchedJobs = await apiService.getJobs('all');
       setJobs(fetchedJobs);
 
       // Check which jobs have cover letters
@@ -108,9 +109,12 @@ export function JobsPage() {
       <div className="container mx-auto p-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold text-white mb-2">Job Postings</h2>
+            <div className="flex items-center gap-3 mb-2">
+              <Briefcase className="w-8 h-8 text-blue-400" />
+              <h2 className="text-3xl font-bold text-white">Job Postings</h2>
+            </div>
             <p className="text-gray-400">
-              Add and manage job postings for cover letter generation
+              Add and manage job postings for document generation
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -202,9 +206,16 @@ export function JobsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className="text-xs">
-                        {job.is_scraped ? 'Scraped' : 'Manual'}
-                      </Badge>
+                      {job.source === 'scout' ? (
+                        <Badge className="text-xs bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                          <Search className="w-3 h-3 mr-1" />
+                          Scout
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">
+                          {job.is_scraped ? 'Scraped' : 'Manual'}
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       {jobsWithCoverLetters.has(job.id) ? (
@@ -275,9 +286,16 @@ export function JobsPage() {
                       <Briefcase className="w-6 h-6 text-blue-400" />
                     </div>
                     <div className="flex gap-2">
-                      <Badge variant="secondary" className="text-xs">
-                        {job.is_scraped ? 'Scraped' : 'Manual'}
-                      </Badge>
+                      {job.source === 'scout' ? (
+                        <Badge className="text-xs bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                          <Search className="w-3 h-3 mr-1" />
+                          Scout
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">
+                          {job.is_scraped ? 'Scraped' : 'Manual'}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <h3 className="text-lg font-semibold text-white mb-1 line-clamp-1">
@@ -468,7 +486,7 @@ export function JobsPage() {
                 className="flex-1 gap-2 bg-purple-600 hover:bg-purple-700 text-white"
               >
                 <Wand2 className="w-4 h-4" />
-                Generate Cover Letter
+                Generate Documents
               </Button>
               <Button
                 variant="outline"

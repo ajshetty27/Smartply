@@ -1,10 +1,10 @@
 """
-Migration script to add stage column to local SQLite database
+Migration script to add stage column to jobs and additional_information to user_profiles
 """
 import sqlite3
 
-def add_stage_column():
-    """Add stage column to jobs table in local database"""
+def migrate_local_db():
+    """Add missing columns to local database"""
     try:
         # Connect to local SQLite database
         conn = sqlite3.connect('smartply.db')
@@ -24,6 +24,21 @@ def add_stage_column():
         except sqlite3.OperationalError as e:
             if "duplicate column name" in str(e):
                 print("✓ Stage column already exists")
+            else:
+                raise
+        
+        # Add additional_information column to user_profiles
+        print("\nAdding additional_information column to user_profiles...")
+        try:
+            cur.execute("""
+                ALTER TABLE user_profiles 
+                ADD COLUMN additional_information TEXT;
+            """)
+            conn.commit()
+            print("✓ Successfully added additional_information column")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" in str(e):
+                print("✓ additional_information column already exists")
             else:
                 raise
         
@@ -52,6 +67,6 @@ def add_stage_column():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("Adding stage column to local jobs table")
+    print("Migrating local database")
     print("=" * 60)
-    add_stage_column()
+    migrate_local_db()

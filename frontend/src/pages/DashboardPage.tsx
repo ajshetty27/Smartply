@@ -12,7 +12,7 @@ import { JobInput } from '@/components/JobInput';
 import { JobTracker, type TrackedJob } from '@/components/JobTracker';
 import { apiService } from '@/lib/api';
 import type { Job, UserProfile, JobStage } from '@/lib/api';
-import { Loader2, FileText, Briefcase, User, Save, Eye, Upload, MapPin, Plus, BarChart3 } from 'lucide-react';
+import { Loader2, FileText, Briefcase, User, Save, Eye, Upload, MapPin, Plus, BarChart3, LayoutDashboard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export function DashboardPage() {
@@ -96,15 +96,15 @@ export function DashboardPage() {
 
   const loadProcessedJobs = async () => {
     try {
-      // Load jobs with cover letters (processed)
-      const jobsWithCoverLetters = await apiService.getJobsWithCoverLetters(sessionId);
+      // Load all jobs with cover letters (processed) - including Scout jobs
+      const jobsWithCoverLetters = await apiService.getJobsWithCoverLetters('all');
       setProcessedJobs(jobsWithCoverLetters);
       
-      // Load all jobs to find pending ones
-      const allJobsList = await apiService.getJobs(sessionId);
+      // Load all jobs (including Scout jobs) to find pending ones
+      const allJobsList = await apiService.getJobs('all');
       setAllJobs(allJobsList);
       
-      // Find pending jobs (jobs without cover letters)
+      // Find pending jobs (jobs without cover letters) - these are in "found" state
       const processedIds = new Set(jobsWithCoverLetters.map(j => j.id));
       const pending = allJobsList.filter(job => !processedIds.has(job.id));
       setPendingJobs(pending);
@@ -122,8 +122,12 @@ export function DashboardPage() {
   const loadCoverLetter = async (jobId: number) => {
     setLoadingCoverLetter(true);
     try {
-      const coverLetter = await apiService.getCoverLetter(jobId);
-      setCoverLetterContent(coverLetter.content);
+      const coverLetters = await apiService.getCoverLettersForJob(jobId);
+      if (coverLetters.length > 0) {
+        setCoverLetterContent(coverLetters[0].content);
+      } else {
+        setCoverLetterContent('No cover letter found for this job.');
+      }
     } catch (error) {
       console.error('Failed to load cover letter:', error);
       setCoverLetterContent('No cover letter found for this job.');
@@ -227,8 +231,11 @@ export function DashboardPage() {
     <div className="min-h-screen bg-black">
       <div className="container mx-auto p-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Dashboard</h1>
-          <p className="text-gray-400">Manage your profile, resume, and cover letters</p>
+          <div className="flex items-center gap-3 mb-2">
+            <LayoutDashboard className="w-8 h-8 text-white" />
+            <h1 className="text-4xl font-bold text-white">Dashboard</h1>
+          </div>
+          <p className="text-gray-400">Manage your profile, resume, and documents</p>
         </div>
 
         <div className="space-y-6">
@@ -504,7 +511,7 @@ export function DashboardPage() {
                               Job Description
                             </TabsTrigger>
                             <TabsTrigger value="cover-letter" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
-                              Cover Letter
+                              Documents
                             </TabsTrigger>
                           </TabsList>
                           <TabsContent value="description" className="mt-4">
@@ -630,7 +637,7 @@ export function DashboardPage() {
           <DialogHeader>
             <DialogTitle className="text-white">Add New Job</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Add a job posting to generate a cover letter
+              Add a job posting to generate documents
             </DialogDescription>
           </DialogHeader>
           <JobInput sessionId={sessionId} onJobAdded={handleJobAdded} />

@@ -1,14 +1,15 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Briefcase, FileText, Rocket, LayoutDashboard, LogOut, User, ChevronDown } from 'lucide-react';
+import { Briefcase, FileText, Rocket, LayoutDashboard, LogOut, User, ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { authService } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Jobs', href: '/jobs', icon: Briefcase },
-  { name: 'Cover Letters', href: '/cover-letters', icon: FileText },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, color: 'text-white' },
+  { name: 'Jobs', href: '/jobs', icon: Briefcase, color: 'text-blue-400' },
+  { name: 'Docs', href: '/cover-letters', icon: FileText, color: 'text-purple-400' },
+  { name: 'Scout', href: '/scout', icon: Search, color: 'text-yellow-400' },
 ];
 
 export function Sidebar() {
@@ -53,7 +54,7 @@ export function Sidebar() {
                   : 'text-gray-400 hover:bg-white/5 hover:text-white'
               )}
             >
-              <item.icon className="w-5 h-5" />
+              <item.icon className={cn('w-5 h-5', isActive && item.color)} />
               {item.name}
             </Link>
           );

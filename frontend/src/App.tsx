@@ -7,6 +7,7 @@ import { JobsPage } from '@/pages/JobsPage';
 import { CoverLettersPage } from '@/pages/CoverLettersPage';
 import { GenerateCoverLetterPage } from '@/pages/GenerateCoverLetterPage';
 import { CoverLetterViewPage } from '@/pages/CoverLetterViewPage';
+import { ScoutPage } from '@/pages/ScoutPage';
 import { Toaster } from '@/components/ui/toaster';
 import { authService } from '@/lib/auth';
 
@@ -25,6 +26,7 @@ function App() {
           <Route path="cover-letters" element={<CoverLettersPage />} />
           <Route path="cover-letters/generate/:jobId" element={<GenerateCoverLetterPage />} />
           <Route path="cover-letters/view/:jobId" element={<CoverLetterViewPage />} />
+          <Route path="scout" element={<ScoutPage />} />
         </Route>
       </Routes>
       <Toaster />

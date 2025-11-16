@@ -236,12 +236,42 @@ Use the candidate's name "{candidate_name}" in the closing signature, and includ
         
         cover_letter_content = response.choices[0].message.content
         
+        # Generate resume modifications
+        resume_mod_prompt = f"""Analyze the following resume against the job description and provide specific suggestions for modifications.
+
+JOB DESCRIPTION:
+{job.job_description}
+
+CANDIDATE'S RESUME:
+{resume.content}
+
+Provide your response as a JSON array of modification objects. Each object should have:
+- "section": the resume section (e.g., "Experience", "Skills", "Education", "Summary")
+- "type": one of "add", "modify", "remove", or "highlight"
+- "suggestion": specific text or skill to add/modify/remove
+- "reason": brief explanation of why this change helps match the job requirements
+
+Format your response as valid JSON only, no other text."""
+
+        resume_mod_response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are an expert resume analyst. Provide specific, actionable suggestions to tailor a resume for a job. Always respond with valid JSON only."},
+                {"role": "user", "content": resume_mod_prompt}
+            ],
+            temperature=0.5,
+            max_tokens=1500
+        )
+        
+        resume_modifications = resume_mod_response.choices[0].message.content
+        
         # Save cover letter to database
         cover_letter = CoverLetter(
             job_id=data.job_id,
             resume_id=data.resume_id,
             session_id=data.session_id,
             content=cover_letter_content,
+            resume_modifications=resume_modifications,
             additional_prompt=data.additional_prompt,
             user_id=current_user.id
         )
@@ -286,6 +316,26 @@ async def get_cover_letters_for_job(
         CoverLetter.user_id == current_user.id
     ).order_by(CoverLetter.generated_at.desc()).all()
     return cover_letters
+
+@router.delete("/cover-letters/{cover_letter_id}")
+async def delete_cover_letter(
+    cover_letter_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a specific cover letter (does not delete the associated job)"""
+    cover_letter = db.query(CoverLetter).filter(
+        CoverLetter.id == cover_letter_id,
+        CoverLetter.user_id == current_user.id
+    ).first()
+    
+    if not cover_letter:
+        raise HTTPException(status_code=404, detail="Cover letter not found")
+    
+    db.delete(cover_letter)
+    db.commit()
+    
+    return {"message": "Cover letter deleted successfully"}
 
 @router.post("/cover-letters/{cover_letter_id}/edit")
 async def edit_cover_letter(

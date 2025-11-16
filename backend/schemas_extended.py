@@ -23,6 +23,7 @@ class CoverLetterResponse(BaseModel):
     id: int
     job_id: int
     content: str
+    resume_modifications: Optional[str] = None  # JSON string
     generated_at: datetime
     
     class Config:

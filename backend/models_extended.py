@@ -25,6 +25,7 @@ class CoverLetter(Base):
     resume_id = Column(Integer, ForeignKey("resumes.id"))
     session_id = Column(String, index=True)
     content = Column(Text)
+    resume_modifications = Column(Text, nullable=True)  # JSON string with resume modification suggestions
     additional_prompt = Column(Text, nullable=True)
     generated_at = Column(DateTime, default=datetime.utcnow)
     

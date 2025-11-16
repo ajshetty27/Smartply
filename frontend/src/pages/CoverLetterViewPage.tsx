@@ -3,8 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Download, Send, Sparkles, Loader2, X } from 'lucide-react';
-import { apiService } from '@/lib/api';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowLeft, Download, Send, Sparkles, Loader2, X, FileText, Lightbulb, AlertCircle, Plus, Edit, Trash } from 'lucide-react';
+import { apiService, ResumeModification } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 interface ChatMessage {
@@ -14,18 +15,20 @@ interface ChatMessage {
 }
 
 export function CoverLetterViewPage() {
-  const { jobId } = useParams<{ jobId: string }>();
+  const { jobId } = useParams<{ jobId: string }>(); // Note: despite the name, this is the cover letter ID
   const navigate = useNavigate();
   const { toast } = useToast();
   const [chatMessage, setChatMessage] = useState('');
   const [selectedText, setSelectedText] = useState('');
   const [coverLetterContent, setCoverLetterContent] = useState('');
+  const [resumeModifications, setResumeModifications] = useState<ResumeModification[] | null>(null);
   const [coverLetterId, setCoverLetterId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [editingParagraphIndex, setEditingParagraphIndex] = useState<number | null>(null);
   const [editedText, setEditedText] = useState('');
+  const [activeTab, setActiveTab] = useState<string>('cover-letter');
 
   useEffect(() => {
     const loadCoverLetter = async () => {
@@ -37,11 +40,12 @@ export function CoverLetterViewPage() {
       try {
         const coverLetter = await apiService.getCoverLetter(parseInt(jobId));
         setCoverLetterContent(coverLetter.content);
+        setResumeModifications(coverLetter.resume_modifications);
         setCoverLetterId(coverLetter.id);
       } catch (error) {
         toast({
           title: 'Error',
-          description: 'Failed to load cover letter',
+          description: 'Failed to load documents',
           variant: 'destructive',
         });
         navigate('/');
@@ -135,7 +139,7 @@ export function CoverLetterViewPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `cover-letter-${jobId}.pdf`;
+      a.download = `cover-letter-${coverLetterId}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -182,18 +186,18 @@ export function CoverLetterViewPage() {
 
   return (
     <div className="h-full flex">
-      {/* Main Content - Cover Letter Preview */}
-      <div className="flex-1 p-8 overflow-y-auto">
+      {/* Main Content */}
+      <div className="flex-1 p-8 overflow-y-auto bg-black">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <Button
               variant="ghost"
               onClick={() => navigate('/cover-letters')}
-              className="gap-2"
+              className="gap-2 text-white"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Cover Letters
+              Back to Docs
             </Button>
             <Button
               onClick={handleDownloadPDF}
@@ -204,6 +208,25 @@ export function CoverLetterViewPage() {
             </Button>
           </div>
 
+          {/* Tabs for Cover Letter and Resume Modifications */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 bg-white/5">
+              <TabsTrigger value="cover-letter" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white gap-2">
+                <FileText className="w-4 h-4" />
+                Cover Letter
+              </TabsTrigger>
+              <TabsTrigger value="resume-mods" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white gap-2">
+                <Lightbulb className="w-4 h-4" />
+                Resume Suggestions
+                {resumeModifications && resumeModifications.length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 text-xs bg-blue-500 rounded-full">
+                    {resumeModifications.length}
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="cover-letter" className="mt-6">
           {/* Cover Letter */}
           <Card className="p-8 md:p-12">
             <div
@@ -256,6 +279,91 @@ export function CoverLetterViewPage() {
               ))}
             </div>
           </Card>
+            </TabsContent>
+
+            <TabsContent value="resume-mods" className="mt-6">
+              <Card className="p-8 bg-black/40 backdrop-blur-xl border-white/10">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h3 className="text-2xl font-bold text-white mb-2">Resume Modification Suggestions</h3>
+                      <p className="text-gray-400">
+                        AI-generated suggestions to tailor your resume for this specific job
+                      </p>
+                    </div>
+                  </div>
+
+                  {resumeModifications && resumeModifications.length > 0 ? (
+                    <div className="space-y-4">
+                      {resumeModifications.map((mod, index) => {
+                        const getTypeIcon = (type: string) => {
+                          switch (type) {
+                            case 'add':
+                              return <Plus className="w-5 h-5 text-green-400" />;
+                            case 'modify':
+                              return <Edit className="w-5 h-5 text-blue-400" />;
+                            case 'remove':
+                              return <Trash className="w-5 h-5 text-red-400" />;
+                            case 'highlight':
+                              return <Sparkles className="w-5 h-5 text-yellow-400" />;
+                            default:
+                              return <AlertCircle className="w-5 h-5 text-gray-400" />;
+                          }
+                        };
+
+                        const getTypeColor = (type: string) => {
+                          switch (type) {
+                            case 'add':
+                              return 'border-green-500/30 bg-green-500/10';
+                            case 'modify':
+                              return 'border-blue-500/30 bg-blue-500/10';
+                            case 'remove':
+                              return 'border-red-500/30 bg-red-500/10';
+                            case 'highlight':
+                              return 'border-yellow-500/30 bg-yellow-500/10';
+                            default:
+                              return 'border-gray-500/30 bg-gray-500/10';
+                          }
+                        };
+
+                        return (
+                          <div
+                            key={index}
+                            className={`p-4 border rounded-lg ${getTypeColor(mod.type)}`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="mt-1">{getTypeIcon(mod.type)}</div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="font-semibold text-white capitalize">
+                                    {mod.type}
+                                  </span>
+                                  <span className="text-gray-400">•</span>
+                                  <span className="text-gray-300">{mod.section}</span>
+                                </div>
+                                <p className="text-white mb-2 font-medium">{mod.suggestion}</p>
+                                <p className="text-gray-400 text-sm">{mod.reason}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Lightbulb className="w-16 h-16 mx-auto text-gray-600 mb-4" />
+                      <h3 className="text-xl font-semibold text-white mb-2">
+                        No Suggestions Available
+                      </h3>
+                      <p className="text-gray-400">
+                        Resume modification suggestions will appear here after document generation
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 

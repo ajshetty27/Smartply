@@ -25,6 +25,43 @@ export interface UserProfile {
   additional_information: string | null;
 }
 
+export interface ResumeModification {
+  section: string;
+  type: 'add' | 'modify' | 'remove' | 'highlight';
+  suggestion: string;
+  reason: string;
+}
+
+export interface CoverLetter {
+  id: number;
+  job_id: number;
+  content: string;
+  resume_modifications: ResumeModification[] | null;
+  generated_at: string;
+}
+
+export interface ScoutedJob {
+  id: number;
+  external_id: string | null;
+  title: string;
+  company: string;
+  location: string | null;
+  description: string | null;
+  salary_min: number | null;  // Float from API, will be displayed as rounded
+  salary_max: number | null;  // Float from API, will be displayed as rounded
+  contract_type: string | null;
+  redirect_url: string;
+  relevance_score: number;
+  scouted_at: string;
+  status: string;
+}
+
+export interface ScoutSearchRequest {
+  country?: string;
+  location?: string;
+  max_results?: number;
+}
+
 export interface JobURLSubmit {
   url: string;
   session_id: string;
@@ -137,12 +174,38 @@ class ApiService {
     });
   }
 
-  async getCoverLetter(coverLetterId: number): Promise<{ id: number; job_id: number; content: string; generated_at: string }> {
-    return this.request(`/cover-letters/${coverLetterId}`);
+  async getCoverLetter(coverLetterId: number): Promise<CoverLetter> {
+    const data = await this.request<any>(`/cover-letters/${coverLetterId}`);
+    // Parse resume_modifications if it's a JSON string
+    if (data.resume_modifications && typeof data.resume_modifications === 'string') {
+      try {
+        data.resume_modifications = JSON.parse(data.resume_modifications);
+      } catch (e) {
+        data.resume_modifications = null;
+      }
+    }
+    return data;
   }
 
-  async getCoverLettersForJob(jobId: number): Promise<Array<{ id: number; job_id: number; content: string; generated_at: string }>> {
-    return this.request(`/cover-letters/job/${jobId}`);
+  async getCoverLettersForJob(jobId: number): Promise<CoverLetter[]> {
+    const data = await this.request<any[]>(`/cover-letters/job/${jobId}`);
+    // Parse resume_modifications for each cover letter
+    return data.map(cl => {
+      if (cl.resume_modifications && typeof cl.resume_modifications === 'string') {
+        try {
+          cl.resume_modifications = JSON.parse(cl.resume_modifications);
+        } catch (e) {
+          cl.resume_modifications = null;
+        }
+      }
+      return cl;
+    });
+  }
+
+  async deleteCoverLetter(coverLetterId: number): Promise<void> {
+    return this.request(`/cover-letters/${coverLetterId}`, {
+      method: 'DELETE',
+    });
   }
 
   async editCoverLetter(coverLetterId: number, selectedText: string, instruction: string): Promise<{
@@ -227,6 +290,35 @@ class ApiService {
       }
     }
     return 'cover-letter.pdf';
+  }
+
+  // Scout API methods
+  async searchScoutJobs(request: ScoutSearchRequest = {}): Promise<ScoutedJob[]> {
+    return this.request(`/scout/search`, {
+      method: 'POST',
+      body: JSON.stringify({
+        country: request.country || 'us',
+        location: request.location || null,
+        max_results: request.max_results || 20,
+      }),
+    });
+  }
+
+  async getScoutedJobs(status: string = 'new'): Promise<ScoutedJob[]> {
+    return this.request(`/scout/jobs?status=${status}`);
+  }
+
+  async performJobAction(jobId: number, action: 'save' | 'dismiss'): Promise<{ message: string }> {
+    return this.request(`/scout/jobs/${jobId}/action`, {
+      method: 'POST',
+      body: JSON.stringify({ action }),
+    });
+  }
+
+  async deleteScoutedJob(jobId: number): Promise<{ message: string }> {
+    return this.request(`/scout/jobs/${jobId}`, {
+      method: 'DELETE',
+    });
   }
 }
 

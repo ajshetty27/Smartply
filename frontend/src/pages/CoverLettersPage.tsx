@@ -59,13 +59,18 @@ export function CoverLettersPage() {
   const loadCoverLetters = async () => {
     try {
       setLoading(true);
-      const jobs = await apiService.getJobsWithCoverLetters(sessionId);
+      // Load all jobs with cover letters (including Scout jobs)
+      const jobs = await apiService.getJobsWithCoverLetters('all');
       
       // Load cover letter data for each job
       const coverLettersData = await Promise.all(
         jobs.map(async (job) => {
           try {
-            const coverLetter = await apiService.getCoverLetter(job.id);
+            const coverLetters = await apiService.getCoverLettersForJob(job.id);
+            if (coverLetters.length === 0) return null;
+            
+            // Get the most recent cover letter
+            const coverLetter = coverLetters[0];
             return {
               id: coverLetter.id,
               job_id: job.id,
@@ -90,20 +95,20 @@ export function CoverLettersPage() {
     }
   };
 
-  const handleDelete = async (jobId: number) => {
-    if (!confirm('Are you sure you want to delete this cover letter?')) return;
+  const handleDelete = async (coverLetterId: number) => {
+    if (!confirm('Are you sure you want to delete this document? The job will remain in your list.')) return;
     
     try {
-      await apiService.deleteJob(jobId);
+      await apiService.deleteCoverLetter(coverLetterId);
       await loadCoverLetters();
     } catch (error) {
-      console.error('Failed to delete cover letter:', error);
-      alert('Failed to delete cover letter. Please try again.');
+      console.error('Failed to delete document:', error);
+      alert('Failed to delete document. Please try again.');
     }
   };
 
-  const handleView = (jobId: number) => {
-    navigate(`/cover-letters/view/${jobId}`);
+  const handleView = (coverLetterId: number) => {
+    navigate(`/cover-letters/view/${coverLetterId}`);
   };
 
   const handleOpenJobSelect = async () => {
@@ -136,9 +141,12 @@ export function CoverLettersPage() {
       <div className="container mx-auto p-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold text-white mb-2">Cover Letters</h2>
+            <div className="flex items-center gap-3 mb-2">
+              <FileText className="w-8 h-8 text-purple-400" />
+              <h2 className="text-3xl font-bold text-white">Docs</h2>
+            </div>
             <p className="text-gray-400">
-              Manage your generated cover letters
+              Manage your generated cover letters and resume modifications
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -167,7 +175,7 @@ export function CoverLettersPage() {
               className="gap-2 bg-purple-600 hover:bg-purple-700 text-white"
             >
               <Plus className="w-4 h-4" />
-              Generate Cover Letter
+              Generate Documents
             </Button>
           </div>
         </div>
@@ -177,10 +185,10 @@ export function CoverLettersPage() {
             <CardContent className="py-24 text-center">
               <Briefcase className="w-16 h-16 mx-auto text-gray-600 mb-4" />
               <h3 className="text-xl font-semibold text-white mb-2">
-                No Cover Letters Yet
+                No Documents Yet
               </h3>
               <p className="text-gray-400 mb-6">
-                Generate your first cover letter from a job posting
+                Generate your first cover letter and resume modifications from a job posting
               </p>
               <Button onClick={() => navigate('/jobs')} variant="outline">
                 Go to Jobs
@@ -221,7 +229,7 @@ export function CoverLettersPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleView(coverLetter.job_id)}
+                          onClick={() => handleView(coverLetter.id)}
                           className="gap-2"
                         >
                           <Eye className="w-4 h-4" />
@@ -239,7 +247,7 @@ export function CoverLettersPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDelete(coverLetter.job_id)}
+                          onClick={() => handleDelete(coverLetter.id)}
                           className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -257,7 +265,7 @@ export function CoverLettersPage() {
               <Card
                 key={coverLetter.id}
                 className="bg-black/40 backdrop-blur-xl border-white/10 hover:bg-white/5 transition-all cursor-pointer"
-                onClick={() => handleView(coverLetter.job_id)}
+                onClick={() => handleView(coverLetter.id)}
               >
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
@@ -282,7 +290,7 @@ export function CoverLettersPage() {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDelete(coverLetter.job_id);
+                          handleDelete(coverLetter.id);
                         }}
                         className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                       >
@@ -307,7 +315,7 @@ export function CoverLettersPage() {
                       className="gap-2"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleView(coverLetter.job_id);
+                        handleView(coverLetter.id);
                       }}
                     >
                       <Eye className="w-3 h-3" />

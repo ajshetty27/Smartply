@@ -142,9 +142,9 @@ export function GenerateCoverLetterModal({ jobTitle, jobId }: GenerateCoverLette
           <div className="flex flex-col items-center justify-center py-8 space-y-4">
             <Loader2 className="w-16 h-16 animate-spin text-purple-400" />
             <div className="text-center space-y-2">
-              <h3 className="text-lg font-semibold text-white">Generating Cover Letter</h3>
+              <h3 className="text-lg font-semibold text-white">Generating Documents</h3>
               <p className="text-sm text-gray-400">
-                Our AI is crafting a personalized cover letter for you...
+                Our AI is crafting a personalized cover letter and resume suggestions for you...
               </p>
             </div>
           </div>
@@ -157,9 +157,9 @@ export function GenerateCoverLetterModal({ jobTitle, jobId }: GenerateCoverLette
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-2xl bg-black/90 backdrop-blur-xl border-white/10">
         <DialogHeader>
-          <DialogTitle className="text-2xl">Generate Cover Letter</DialogTitle>
+          <DialogTitle className="text-2xl">Generate Documents</DialogTitle>
           <DialogDescription>
-            Creating a cover letter for: <span className="font-semibold text-white">{jobTitle}</span>
+            Creating cover letter and resume modifications for: <span className="font-semibold text-white">{jobTitle}</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -327,7 +327,7 @@ export function GenerateCoverLetterModal({ jobTitle, jobId }: GenerateCoverLette
             className="bg-purple-600 hover:bg-purple-700 text-white"
             disabled={!resumeFile && !existingResume}
           >
-            Generate Cover Letter
+            Generate Documents
           </Button>
         </div>
       </DialogContent>

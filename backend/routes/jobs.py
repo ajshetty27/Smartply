@@ -111,11 +111,18 @@ async def get_jobs(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get all jobs for a session"""
-    jobs = db.query(Job).filter(
-        Job.session_id == session_id,
-        Job.user_id == current_user.id
-    ).order_by(Job.scraped_at.desc()).all()
+    """Get all jobs for a session or all jobs for user if session_id is 'all'"""
+    if session_id == "all":
+        # Get all jobs for the user regardless of session
+        jobs = db.query(Job).filter(
+            Job.user_id == current_user.id
+        ).order_by(Job.scraped_at.desc()).all()
+    else:
+        # Get jobs for specific session
+        jobs = db.query(Job).filter(
+            Job.session_id == session_id,
+            Job.user_id == current_user.id
+        ).order_by(Job.scraped_at.desc()).all()
     return jobs
 
 @router.get("/jobs/{session_id}/with-cover-letters", response_model=List[JobResponse])
@@ -128,11 +135,19 @@ async def get_jobs_with_cover_letters(
     from models_extended import CoverLetter
     from sqlalchemy import exists
     
-    jobs = db.query(Job).filter(
-        Job.session_id == session_id,
-        Job.user_id == current_user.id,
-        exists().where(CoverLetter.job_id == Job.id)
-    ).order_by(Job.scraped_at.desc()).all()
+    if session_id == "all":
+        # Get all jobs for the user that have cover letters
+        jobs = db.query(Job).filter(
+            Job.user_id == current_user.id,
+            exists().where(CoverLetter.job_id == Job.id)
+        ).order_by(Job.scraped_at.desc()).all()
+    else:
+        # Get jobs for specific session that have cover letters
+        jobs = db.query(Job).filter(
+            Job.session_id == session_id,
+            Job.user_id == current_user.id,
+            exists().where(CoverLetter.job_id == Job.id)
+        ).order_by(Job.scraped_at.desc()).all()
     
     return jobs
 
