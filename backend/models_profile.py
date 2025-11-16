@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from datetime import datetime
 from database import Base
 
@@ -12,6 +12,6 @@ class UserProfile(Base):
     email = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     location = Column(String, nullable=True)
-    additional_information = Column(String, nullable=True)
+    additional_information = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
