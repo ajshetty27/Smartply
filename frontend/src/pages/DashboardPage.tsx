@@ -9,9 +9,10 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PDFViewer } from '@/components/PDFViewer';
 import { JobInput } from '@/components/JobInput';
+import { JobTracker, type TrackedJob } from '@/components/JobTracker';
 import { apiService } from '@/lib/api';
-import type { Job, UserProfile } from '@/lib/api';
-import { Loader2, FileText, Briefcase, User, Save, Eye, Upload, MapPin, Plus } from 'lucide-react';
+import type { Job, UserProfile, JobStage } from '@/lib/api';
+import { Loader2, FileText, Briefcase, User, Save, Eye, Upload, MapPin, Plus, BarChart3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export function DashboardPage() {
@@ -48,6 +49,7 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
   const [addJobOpen, setAddJobOpen] = useState(false);
+  const [dashboardView, setDashboardView] = useState<'list' | 'tracker'>('list');
 
   useEffect(() => {
     loadData();
@@ -195,6 +197,23 @@ export function DashboardPage() {
   const handleJobAdded = () => {
     loadProcessedJobs();
     setAddJobOpen(false);
+  };
+
+  const handleJobStageChange = async (jobId: number, newStage: JobStage) => {
+    try {
+      await apiService.updateJobStage(jobId, newStage);
+      toast({
+        title: 'Success',
+        description: 'Job stage updated successfully',
+      });
+      await loadProcessedJobs();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update job stage',
+        variant: 'destructive',
+      });
+    }
   };
 
   if (loading) {
@@ -407,16 +426,30 @@ export function DashboardPage() {
                 <CardTitle className="text-white flex items-center justify-between">
                   <span>Your Jobs</span>
                   <div className="flex items-center gap-3">
-                    <Tabs value={jobsTab} onValueChange={(v) => setJobsTab(v as 'processed' | 'pending')} className="w-auto">
+                    <Tabs value={dashboardView} onValueChange={(v) => setDashboardView(v as 'list' | 'tracker')} className="w-auto">
                       <TabsList className="bg-white/5">
-                        <TabsTrigger value="processed" className="data-[state=active]:bg-white data-[state=active]:text-black">
-                          Processed ({processedJobs.length})
+                        <TabsTrigger value="list" className="data-[state=active]:bg-white data-[state=active]:text-black">
+                          <Briefcase className="w-4 h-4 mr-2" />
+                          List View
                         </TabsTrigger>
-                        <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:text-black">
-                          Pending ({pendingJobs.length})
+                        <TabsTrigger value="tracker" className="data-[state=active]:bg-white data-[state=active]:text-black">
+                          <BarChart3 className="w-4 h-4 mr-2" />
+                          Tracker
                         </TabsTrigger>
                       </TabsList>
                     </Tabs>
+                    {dashboardView === 'list' && (
+                      <Tabs value={jobsTab} onValueChange={(v) => setJobsTab(v as 'processed' | 'pending')} className="w-auto">
+                        <TabsList className="bg-white/5">
+                          <TabsTrigger value="processed" className="data-[state=active]:bg-white data-[state=active]:text-black">
+                            Processed ({processedJobs.length})
+                          </TabsTrigger>
+                          <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:text-black">
+                            Pending ({pendingJobs.length})
+                          </TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+                    )}
                     <Button 
                       onClick={() => setAddJobOpen(true)} 
                       className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
@@ -429,7 +462,12 @@ export function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {jobsTab === 'processed' && processedJobs.length === 0 ? (
+                {dashboardView === 'tracker' ? (
+                  <JobTracker
+                    jobs={allJobs as TrackedJob[]}
+                    onJobStageChange={handleJobStageChange}
+                  />
+                ) : jobsTab === 'processed' && processedJobs.length === 0 ? (
                   <div className="text-center py-12">
                     <Briefcase className="w-12 h-12 mx-auto text-gray-600 mb-3" />
                     <p className="text-gray-400 mb-4">No processed jobs yet</p>

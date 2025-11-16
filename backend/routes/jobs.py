@@ -154,3 +154,29 @@ async def delete_job(
     db.commit()
     
     return {"message": "Job deleted successfully"}
+
+@router.patch("/jobs/{job_id}/stage")
+async def update_job_stage(
+    job_id: int,
+    stage: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Update job stage"""
+    # Validate stage
+    valid_stages = ['found', 'documents', 'applied', 'rejected', 'interview', 'accepted']
+    if stage not in valid_stages:
+        raise HTTPException(status_code=400, detail=f"Invalid stage. Must be one of: {', '.join(valid_stages)}")
+    
+    job = db.query(Job).filter(
+        Job.id == job_id,
+        Job.user_id == current_user.id
+    ).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    job.stage = stage
+    db.commit()
+    db.refresh(job)
+    
+    return job

@@ -16,6 +16,7 @@ class Job(Base):
     job_description = Column(Text)
     scraped_at = Column(DateTime, default=datetime.utcnow)
     is_scraped = Column(Boolean, default=False)  # True if from URL, False if manual
+    stage = Column(String, default='found')  # Stages: found, documents, applied, rejected, interview, accepted
     
     def to_dict(self):
         return {
@@ -27,5 +28,6 @@ class Job(Base):
             "location": self.location,
             "job_description": self.job_description,
             "scraped_at": self.scraped_at.isoformat() if self.scraped_at else None,
-            "is_scraped": self.is_scraped
+            "is_scraped": self.is_scraped,
+            "stage": self.stage
         }

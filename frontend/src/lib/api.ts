@@ -1,5 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
+export type JobStage = 'found' | 'documents' | 'applied' | 'rejected' | 'interview' | 'accepted';
+
 export interface Job {
   id: number;
   url: string | null;
@@ -10,6 +12,7 @@ export interface Job {
   job_description: string;
   scraped_at: string;
   is_scraped: boolean;
+  stage: JobStage;
 }
 
 export interface UserProfile {
@@ -90,6 +93,12 @@ class ApiService {
   async deleteJob(jobId: number): Promise<{ message: string }> {
     return this.request<{ message: string }>(`/jobs/${jobId}`, {
       method: 'DELETE',
+    });
+  }
+
+  async updateJobStage(jobId: number, stage: JobStage): Promise<Job> {
+    return this.request<Job>(`/jobs/${jobId}/stage?stage=${stage}`, {
+      method: 'PATCH',
     });
   }
 

@@ -34,6 +34,7 @@ class JobResponse(BaseModel):
     job_description: str
     scraped_at: datetime
     is_scraped: bool
+    stage: str = 'found'
     
     class Config:
         from_attributes = True
