@@ -49,7 +49,6 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
   const [addJobOpen, setAddJobOpen] = useState(false);
-  const [dashboardView, setDashboardView] = useState<'list' | 'tracker'>('list');
 
   useEffect(() => {
     loadData();
@@ -232,9 +231,11 @@ export function DashboardPage() {
           <p className="text-gray-400">Manage your profile, resume, and cover letters</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Profile & Resume */}
-          <div className="lg:col-span-1">
+        <div className="space-y-6">
+          {/* Top Row - Profile & Jobs */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column - Profile & Resume */}
+            <div className="lg:col-span-1">
             <Card className="bg-black/40 backdrop-blur-xl border-white/10">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
@@ -426,30 +427,16 @@ export function DashboardPage() {
                 <CardTitle className="text-white flex items-center justify-between">
                   <span>Your Jobs</span>
                   <div className="flex items-center gap-3">
-                    <Tabs value={dashboardView} onValueChange={(v) => setDashboardView(v as 'list' | 'tracker')} className="w-auto">
+                    <Tabs value={jobsTab} onValueChange={(v) => setJobsTab(v as 'processed' | 'pending')} className="w-auto">
                       <TabsList className="bg-white/5">
-                        <TabsTrigger value="list" className="data-[state=active]:bg-white data-[state=active]:text-black">
-                          <Briefcase className="w-4 h-4 mr-2" />
-                          List View
+                        <TabsTrigger value="processed" className="data-[state=active]:bg-white data-[state=active]:text-black">
+                          Processed ({processedJobs.length})
                         </TabsTrigger>
-                        <TabsTrigger value="tracker" className="data-[state=active]:bg-white data-[state=active]:text-black">
-                          <BarChart3 className="w-4 h-4 mr-2" />
-                          Tracker
+                        <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:text-black">
+                          Pending ({pendingJobs.length})
                         </TabsTrigger>
                       </TabsList>
                     </Tabs>
-                    {dashboardView === 'list' && (
-                      <Tabs value={jobsTab} onValueChange={(v) => setJobsTab(v as 'processed' | 'pending')} className="w-auto">
-                        <TabsList className="bg-white/5">
-                          <TabsTrigger value="processed" className="data-[state=active]:bg-white data-[state=active]:text-black">
-                            Processed ({processedJobs.length})
-                          </TabsTrigger>
-                          <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:text-black">
-                            Pending ({pendingJobs.length})
-                          </TabsTrigger>
-                        </TabsList>
-                      </Tabs>
-                    )}
                     <Button 
                       onClick={() => setAddJobOpen(true)} 
                       className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
@@ -462,12 +449,7 @@ export function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {dashboardView === 'tracker' ? (
-                  <JobTracker
-                    jobs={allJobs as TrackedJob[]}
-                    onJobStageChange={handleJobStageChange}
-                  />
-                ) : jobsTab === 'processed' && processedJobs.length === 0 ? (
+                {jobsTab === 'processed' && processedJobs.length === 0 ? (
                   <div className="text-center py-12">
                     <Briefcase className="w-12 h-12 mx-auto text-gray-600 mb-3" />
                     <p className="text-gray-400 mb-4">No processed jobs yet</p>
@@ -604,6 +586,28 @@ export function DashboardPage() {
                     ))}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </div>
+          </div>
+
+          {/* Job Tracker Section */}
+          <div className="w-full">
+            <Card className="bg-black/40 backdrop-blur-xl border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5" />
+                  Job Application Tracker
+                </CardTitle>
+                <p className="text-gray-400 text-sm mt-1">
+                  Drag and drop jobs to track their progress through your application pipeline
+                </p>
+              </CardHeader>
+              <CardContent>
+                <JobTracker
+                  jobs={allJobs as TrackedJob[]}
+                  onJobStageChange={handleJobStageChange}
+                />
               </CardContent>
             </Card>
           </div>

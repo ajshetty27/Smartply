@@ -247,6 +247,10 @@ Use the candidate's name "{candidate_name}" in the closing signature, and includ
         )
         
         db.add(cover_letter)
+        
+        # Automatically move job to "documents" stage
+        job.stage = 'documents'
+        
         db.commit()
         db.refresh(cover_letter)
         
