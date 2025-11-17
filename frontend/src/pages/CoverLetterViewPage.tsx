@@ -29,6 +29,7 @@ export function CoverLetterViewPage() {
   const [editingParagraphIndex, setEditingParagraphIndex] = useState<number | null>(null);
   const [editedText, setEditedText] = useState('');
   const [activeTab, setActiveTab] = useState<string>('cover-letter');
+  const [highlightedText, setHighlightedText] = useState<string>('');
 
   useEffect(() => {
     const loadCoverLetter = async () => {
@@ -104,6 +105,13 @@ export function CoverLetterViewPage() {
       setChatHistory((prev) => [...prev, assistantMessage]);
       
       setCoverLetterContent(result.full_content);
+      
+      // Highlight the new text
+      setHighlightedText(result.modified_text);
+      setTimeout(() => {
+        setHighlightedText('');
+      }, 5000);
+      
       setChatMessage('');
       setSelectedText('');
       
@@ -268,7 +276,11 @@ export function CoverLetterViewPage() {
                     </div>
                   ) : (
                     <p
-                      className="text-gray-200 cursor-pointer hover:bg-white/5 rounded px-2 py-1 transition-colors"
+                      className={`text-gray-200 cursor-pointer hover:bg-white/5 rounded px-2 py-1 transition-all ${
+                        highlightedText && paragraph.includes(highlightedText)
+                          ? 'bg-green-500/30 animate-pulse'
+                          : ''
+                      }`}
                       onClick={() => handleParagraphClick(index, paragraph)}
                       title="Click to edit"
                     >
