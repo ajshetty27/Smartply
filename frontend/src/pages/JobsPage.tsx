@@ -207,7 +207,7 @@ export function JobsPage() {
                     </TableCell>
                     <TableCell>
                       {job.source === 'scout' ? (
-                        <Badge className="text-xs bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                        <Badge className="text-xs bg-green-500/20 text-green-400 border-green-500/30">
                           <Search className="w-3 h-3 mr-1" />
                           Scout
                         </Badge>
@@ -219,13 +219,13 @@ export function JobsPage() {
                     </TableCell>
                     <TableCell>
                       {jobsWithCoverLetters.has(job.id) ? (
-                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                        <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
                           <FileText className="w-3 h-3 mr-1" />
-                          Has Cover Letter
+                          Docs Generated
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="text-gray-400">
-                          No Cover Letter
+                          No Docs
                         </Badge>
                       )}
                     </TableCell>
@@ -287,7 +287,7 @@ export function JobsPage() {
                     </div>
                     <div className="flex gap-2">
                       {job.source === 'scout' ? (
-                        <Badge className="text-xs bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                        <Badge className="text-xs bg-green-500/20 text-green-400 border-green-500/30">
                           <Search className="w-3 h-3 mr-1" />
                           Scout
                         </Badge>
@@ -311,9 +311,9 @@ export function JobsPage() {
                     </div>
                   )}
                   {jobsWithCoverLetters.has(job.id) && (
-                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30 mb-4">
+                    <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 mb-4">
                       <FileText className="w-3 h-3 mr-1" />
-                      Has Cover Letter
+                      Docs Generated
                     </Badge>
                   )}
                   <div className="flex items-center gap-2">
@@ -398,13 +398,13 @@ export function JobsPage() {
                     {selectedJob.is_scraped ? 'Scraped' : 'Manual'}
                   </Badge>
                   {jobsWithCoverLetters.has(selectedJob.id) && (
-                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
+                    <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-xs">
                       <FileText className="w-3 h-3 mr-1" />
-                      Has Cover Letter
+                      Docs Generated
                     </Badge>
                   )}
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-1">
+                <h2 className="text-2xl font-bold text-white mb-1">{selectedJob.job_title}
                   {selectedJob.job_title}
                 </h2>
                 <p className="text-lg text-gray-300 mb-2">

@@ -147,20 +147,20 @@ export function ScoutPage() {
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-400';
-    if (score >= 60) return 'text-yellow-400';
+    if (score >= 60) return 'text-green-400';
     return 'text-orange-400';
   };
 
   const getScoreBg = (score: number) => {
     if (score >= 80) return 'bg-green-500/20 border-green-500/30';
-    if (score >= 60) return 'bg-yellow-500/20 border-yellow-500/30';
+    if (score >= 60) return 'bg-green-500/20 border-green-500/30';
     return 'bg-orange-500/20 border-orange-500/30';
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-black">
-        <Loader2 className="w-8 h-8 animate-spin text-yellow-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-green-500" />
       </div>
     );
   }
@@ -171,7 +171,7 @@ export function ScoutPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <Search className="w-8 h-8 text-yellow-400" />
+            <Search className="w-8 h-8 text-green-400" />
             <h1 className="text-4xl font-bold text-white">Scout</h1>
           </div>
           <p className="text-gray-400">
@@ -195,7 +195,7 @@ export function ScoutPage() {
               <Button
                 onClick={handleSearch}
                 disabled={searching}
-                className="gap-2 bg-yellow-600 hover:bg-yellow-700 text-white px-8"
+                className="gap-2 bg-green-600 hover:bg-green-700 text-white px-8"
               >
                 {searching ? (
                   <>
@@ -253,7 +253,7 @@ export function ScoutPage() {
                   {jobs.map((job, index) => (
                     <CarouselItem key={job.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/4 xl:basis-1/5">
                       <Card 
-                        className="h-full bg-black/40 backdrop-blur-xl border-white/10 hover:border-yellow-500/50 transition-all cursor-pointer"
+                        className="h-full bg-black/40 backdrop-blur-xl border-white/10 hover:border-green-500/50 transition-all cursor-pointer"
                         onClick={() => handleJobClick(job, index)}
                       >
                       <CardContent className="p-6 flex flex-col h-full">
@@ -329,7 +329,7 @@ export function ScoutPage() {
                         <Button
                           size="sm"
                           onClick={() => window.open(job.redirect_url, '_blank')}
-                          className="w-full mt-2 gap-2 bg-yellow-600 hover:bg-yellow-700"
+                          className="w-full mt-2 gap-2 bg-green-600 hover:bg-green-700"
                         >
                           <ExternalLink className="w-3 h-3" />
                           Apply
@@ -352,7 +352,7 @@ export function ScoutPage() {
             <DialogHeader>
               <div className="flex items-center justify-between pr-6">
                 <DialogTitle className="text-2xl text-white flex items-center gap-3">
-                  <Building2 className="w-6 h-6 text-yellow-400" />
+                  <Building2 className="w-6 h-6 text-green-400" />
                   {selectedJob?.company}
                 </DialogTitle>
                 <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold border ${selectedJob && getScoreBg(selectedJob.relevance_score)}`}>
@@ -447,7 +447,7 @@ export function ScoutPage() {
                     <Button
                       size="sm"
                       onClick={() => window.open(selectedJob.redirect_url, '_blank')}
-                      className="gap-2 bg-yellow-600 hover:bg-yellow-700"
+                      className="gap-2 bg-green-600 hover:bg-green-700"
                     >
                       <ExternalLink className="w-4 h-4" />
                       Apply

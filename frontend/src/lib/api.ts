@@ -62,6 +62,28 @@ export interface ScoutSearchRequest {
   max_results?: number;
 }
 
+export interface QnAItem {
+  id: number;
+  job_id?: number;
+  question: string;
+  answer: string;
+  is_ai_generated: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QnACreate {
+  question: string;
+  answer?: string;
+  generate_answer: boolean;
+  job_id?: number;
+}
+
+export interface QnAUpdate {
+  question?: string;
+  answer?: string;
+}
+
 export interface JobURLSubmit {
   url: string;
   session_id: string;
@@ -318,6 +340,37 @@ class ApiService {
   async deleteScoutedJob(jobId: number): Promise<{ message: string }> {
     return this.request(`/scout/jobs/${jobId}`, {
       method: 'DELETE',
+    });
+  }
+
+  // Q&A Bank API methods
+  async getQnAItems(): Promise<QnAItem[]> {
+    return this.request('/qna');
+  }
+
+  async createQnAItem(data: QnACreate): Promise<QnAItem> {
+    return this.request('/qna', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateQnAItem(qnaId: number, data: QnAUpdate): Promise<QnAItem> {
+    return this.request(`/qna/${qnaId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteQnAItem(qnaId: number): Promise<{ message: string }> {
+    return this.request(`/qna/${qnaId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async regenerateQnAAnswer(qnaId: number): Promise<QnAItem> {
+    return this.request(`/qna/${qnaId}/regenerate`, {
+      method: 'POST',
     });
   }
 }
