@@ -115,7 +115,8 @@ export function CoverLettersPage() {
     setJobSelectOpen(true);
     setLoadingJobs(true);
     try {
-      const jobs = await apiService.getJobs(sessionId);
+      // Load all jobs for the user
+      const jobs = await apiService.getJobs('all');
       setAllJobs(jobs);
     } catch (error) {
       console.error('Failed to load jobs:', error);

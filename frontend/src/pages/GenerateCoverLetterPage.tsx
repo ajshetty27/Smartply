@@ -19,8 +19,8 @@ export function GenerateCoverLetterPage() {
       }
 
       try {
-        const sessionId = localStorage.getItem('smartply_session_id') || '';
-        const jobs = await apiService.getJobs(sessionId);
+        // Load all jobs for the user
+        const jobs = await apiService.getJobs('all');
         const foundJob = jobs.find((j) => j.id === parseInt(jobId));
 
         if (foundJob) {

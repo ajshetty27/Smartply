@@ -77,7 +77,7 @@ export function GenerateCoverLetterModal({ jobTitle, jobId }: GenerateCoverLette
 
   const handleClose = () => {
     setOpen(false);
-    navigate('/');
+    navigate(-1); // Go back to previous page
   };
 
   const handleGenerate = async () => {

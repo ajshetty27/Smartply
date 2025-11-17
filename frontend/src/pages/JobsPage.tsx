@@ -62,7 +62,7 @@ export function JobsPage() {
       setJobs(fetchedJobs);
 
       // Check which jobs have cover letters
-      const jobsWithCL = await apiService.getJobsWithCoverLetters(sessionId);
+      const jobsWithCL = await apiService.getJobsWithCoverLetters('all');
       setJobsWithCoverLetters(new Set(jobsWithCL.map(j => j.id)));
     } catch (error) {
       console.error('Failed to load jobs:', error);
