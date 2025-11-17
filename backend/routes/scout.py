@@ -62,6 +62,47 @@ LEVEL: [entry/mid/senior]"""
         print(f"Error extracting keywords: {e}")
         return {"role": "Software Engineer", "skills": "Python, JavaScript", "level": "mid"}
 
+def parse_job_description_query(query: str) -> dict:
+    """Use GPT to parse natural language job description into search parameters"""
+    try:
+        prompt = f"""Parse this job search query into structured parameters:
+
+Query: "{query}"
+
+Extract:
+1. Job role/title (e.g., "Software Engineer", "Data Analyst")
+2. Location if mentioned (e.g., "New York", "Remote", "San Francisco") - if not mentioned, return "any"
+3. Key requirements or skills mentioned
+
+Return ONLY in this exact format:
+ROLE: [job title]
+LOCATION: [location or "any"]
+KEYWORDS: [relevant keywords]"""
+
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=100
+        )
+        
+        content = response.choices[0].message.content.strip()
+        lines = content.split('\n')
+        
+        result = {"role": "", "location": "any", "keywords": ""}
+        for line in lines:
+            if line.startswith("ROLE:"):
+                result["role"] = line.replace("ROLE:", "").strip()
+            elif line.startswith("LOCATION:"):
+                result["location"] = line.replace("LOCATION:", "").strip()
+            elif line.startswith("KEYWORDS:"):
+                result["keywords"] = line.replace("KEYWORDS:", "").strip()
+        
+        return result
+    except Exception as e:
+        print(f"Error parsing query: {e}")
+        return {"role": "", "location": "any", "keywords": ""}
+
 def calculate_relevance_score(resume_text: str, job_description: str, job_title: str) -> float:
     """Use GPT to calculate how well the job matches the resume"""
     try:
@@ -110,9 +151,17 @@ async def search_jobs(
         if not resume:
             raise HTTPException(status_code=404, detail="No resume found. Please upload a resume first.")
         
-        # Extract keywords from resume
-        keywords = extract_job_keywords(resume.content)
-        search_query = keywords["role"]
+        # Parse user's job description query if provided
+        if request.location:
+            # User provided a description, parse it
+            parsed_query = parse_job_description_query(request.location)
+            search_query = parsed_query["role"] if parsed_query["role"] else extract_job_keywords(resume.content)["role"]
+            location_query = parsed_query["location"] if parsed_query["location"] != "any" else None
+        else:
+            # No description, use resume keywords
+            keywords = extract_job_keywords(resume.content)
+            search_query = keywords["role"]
+            location_query = None
         
         # Build Adzuna API URL
         url = f"{ADZUNA_BASE_URL}/{request.country}/search/1"
@@ -124,8 +173,8 @@ async def search_jobs(
             "content-type": "application/json"
         }
         
-        if request.location:
-            params["where"] = request.location
+        if location_query:
+            params["where"] = location_query
         
         # Call Adzuna API
         response = requests.get(url, params=params, timeout=10)
