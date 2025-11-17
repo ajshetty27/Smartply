@@ -71,12 +71,12 @@ Query: "{query}"
 
 Extract:
 1. Job role/title (e.g., "Software Engineer", "Data Analyst")
-2. Location if mentioned (e.g., "New York", "Remote", "San Francisco") - if not mentioned, return "any"
+2. Location if mentioned - use full city names (e.g., "New York" not "NYC", "San Francisco" not "SF"). If remote is mentioned, return "Remote". If not mentioned, return "any"
 3. Key requirements or skills mentioned
 
 Return ONLY in this exact format:
 ROLE: [job title]
-LOCATION: [location or "any"]
+LOCATION: [full location name, "Remote", or "any"]
 KEYWORDS: [relevant keywords]"""
 
         response = client.chat.completions.create(
@@ -152,11 +152,25 @@ async def search_jobs(
             raise HTTPException(status_code=404, detail="No resume found. Please upload a resume first.")
         
         # Parse user's job description query if provided
-        if request.location:
+        if request.location and request.location.strip():
             # User provided a description, parse it
             parsed_query = parse_job_description_query(request.location)
             search_query = parsed_query["role"] if parsed_query["role"] else extract_job_keywords(resume.content)["role"]
-            location_query = parsed_query["location"] if parsed_query["location"] != "any" else None
+            # Normalize location - expand common abbreviations
+            location_from_query = parsed_query["location"]
+            if location_from_query and location_from_query != "any":
+                # Expand common abbreviations
+                location_map = {
+                    "nyc": "New York",
+                    "ny": "New York",
+                    "sf": "San Francisco",
+                    "la": "Los Angeles",
+                    "dc": "Washington",
+                }
+                location_lower = location_from_query.lower()
+                location_query = location_map.get(location_lower, location_from_query)
+            else:
+                location_query = None
         else:
             # No description, use resume keywords
             keywords = extract_job_keywords(resume.content)
