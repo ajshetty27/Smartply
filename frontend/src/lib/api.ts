@@ -373,6 +373,12 @@ class ApiService {
       method: 'POST',
     });
   }
+
+  async getJobSearchRecommendations(): Promise<any> {
+    return this.request('/scout/recommendations', {
+      method: 'GET',
+    });
+  }
 }
 
 export const apiService = new ApiService();

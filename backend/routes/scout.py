@@ -334,3 +334,103 @@ async def delete_scouted_job(
     db.commit()
     
     return {"message": "Job deleted successfully"}
+
+
+@router.get("/scout/recommendations")
+async def get_job_search_recommendations(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get personalized job search recommendations based on user's resume"""
+    # Get user's resume
+    resume = db.query(Resume).filter(
+        Resume.user_id == current_user.id
+    ).order_by(Resume.uploaded_at.desc()).first()
+    
+    if not resume:
+        raise HTTPException(status_code=404, detail="No resume found. Please upload a resume first.")
+    
+    resume_text = resume.content[:3000]  # Use first 3000 chars for analysis
+    
+    try:
+        prompt = f"""Based on this resume, provide job search recommendations:
+
+Resume Summary:
+{resume_text}
+
+Provide the following in JSON format:
+{{
+  "linkedin_queries": [5 specific LinkedIn search queries],
+  "indeed_queries": [5 specific Indeed search queries],
+  "strategies": [
+    {{"title": "Strategy name", "description": "Brief explanation"}},
+    ...3-4 strategies
+  ],
+  "key_skills": [5-7 key skills to highlight in applications]
+}}
+
+Make queries specific and actionable. Include Boolean operators for LinkedIn (AND, OR, NOT).
+"""
+
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+            max_tokens=1000
+        )
+        
+        content = response.choices[0].message.content.strip()
+        
+        # Extract JSON from response (handle markdown code blocks)
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0].strip()
+        
+        import json
+        recommendations = json.loads(content)
+        
+        return recommendations
+        
+    except Exception as e:
+        print(f"Error generating recommendations: {str(e)}")
+        # Return fallback recommendations
+        return {
+            "linkedin_queries": [
+                "Software Engineer (Python OR JavaScript) AND (remote OR hybrid)",
+                "Full Stack Developer with React experience",
+                "Data Analyst with SQL skills",
+                "Product Manager AND (SaaS OR B2B)",
+                "DevOps Engineer with AWS certification"
+            ],
+            "indeed_queries": [
+                "software engineer remote",
+                "full stack developer",
+                "data analyst",
+                "product manager",
+                "devops engineer"
+            ],
+            "strategies": [
+                {
+                    "title": "Target Growing Companies",
+                    "description": "Focus on startups and scale-ups in Series A-C funding stages, as they're actively hiring and offer growth opportunities."
+                },
+                {
+                    "title": "Leverage Your Network",
+                    "description": "Reach out to connections at target companies for referrals - referred candidates are 4x more likely to be hired."
+                },
+                {
+                    "title": "Optimize for ATS",
+                    "description": "Mirror job description keywords in your resume to pass applicant tracking systems."
+                }
+            ],
+            "key_skills": [
+                "Python",
+                "JavaScript",
+                "React",
+                "SQL",
+                "AWS",
+                "Git",
+                "Agile"
+            ]
+        }

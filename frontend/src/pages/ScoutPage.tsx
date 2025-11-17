@@ -27,6 +27,10 @@ import {
   X,
   Sparkles,
   Briefcase,
+  Lightbulb,
+  Target,
+  TrendingUp,
+  Brain,
 } from 'lucide-react';
 import { apiService, ScoutedJob } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
@@ -38,6 +42,9 @@ export function ScoutPage() {
   const [selectedJobIndex, setSelectedJobIndex] = useState<number>(0);
   const [searching, setSearching] = useState(false);
   const [jobDescription, setJobDescription] = useState('');
+  const [showRecommendations, setShowRecommendations] = useState(false);
+  const [recommendations, setRecommendations] = useState<any>(null);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const { toast } = useToast();
 
   const loadExistingJobs = async () => {
@@ -117,6 +124,22 @@ export function ScoutPage() {
     }
   };
 
+  const loadRecommendations = async () => {
+    try {
+      setLoadingRecommendations(true);
+      const recs = await apiService.getJobSearchRecommendations();
+      setRecommendations(recs);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to load recommendations',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingRecommendations(false);
+    }
+  };
+
   const handleJobClick = (job: ScoutedJob, index: number) => {
     setSelectedJob(job);
     setSelectedJobIndex(index);
@@ -169,14 +192,28 @@ export function ScoutPage() {
     <div className="min-h-screen bg-black">
       <div className="container mx-auto p-8">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Search className="w-8 h-8 text-green-400" />
-            <h1 className="text-4xl font-bold text-white">Scout</h1>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <Search className="w-8 h-8 text-green-400" />
+              <h1 className="text-4xl font-bold text-white">Scout</h1>
+            </div>
+            <p className="text-gray-400">
+              AI-powered job recommendations based on your resume
+            </p>
           </div>
-          <p className="text-gray-400">
-            AI-powered job recommendations based on your resume
-          </p>
+          <Button
+            onClick={() => {
+              setShowRecommendations(true);
+              if (!recommendations) {
+                loadRecommendations();
+              }
+            }}
+            className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+          >
+            <Brain className="w-4 h-4" />
+            Search Recs
+          </Button>
         </div>
 
         {/* Search Controls */}
@@ -458,6 +495,134 @@ export function ScoutPage() {
             )}
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* Job Recommendations Sidebar */}
+      <div
+        className={`fixed top-0 right-0 h-full w-[600px] bg-black/95 backdrop-blur-xl border-l border-white/10 shadow-2xl transform transition-transform duration-300 ease-in-out z-50 ${
+          showRecommendations ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        {showRecommendations && (
+          <div className="h-full flex flex-col">
+            {/* Header */}
+            <div className="p-6 border-b border-white/10 flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Lightbulb className="w-5 h-5 text-green-400" />
+                  <h2 className="text-2xl font-bold text-white">Job Search Recommendations</h2>
+                </div>
+                <p className="text-gray-400 text-sm">
+                  AI-powered search strategies based on your resume
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowRecommendations(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {loadingRecommendations ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+                </div>
+              ) : recommendations ? (
+                <>
+                  {/* LinkedIn Queries */}
+                  {recommendations.linkedin_queries && recommendations.linkedin_queries.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Target className="w-5 h-5 text-green-400" />
+                        <h3 className="text-lg font-semibold text-white">LinkedIn Search Queries</h3>
+                      </div>
+                      <div className="space-y-2">
+                        {recommendations.linkedin_queries.map((query: string, index: number) => (
+                          <div
+                            key={index}
+                            className="p-3 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"
+                          >
+                            <p className="text-white font-mono text-sm">{query}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Indeed Queries */}
+                  {recommendations.indeed_queries && recommendations.indeed_queries.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Search className="w-5 h-5 text-green-400" />
+                        <h3 className="text-lg font-semibold text-white">Indeed Search Queries</h3>
+                      </div>
+                      <div className="space-y-2">
+                        {recommendations.indeed_queries.map((query: string, index: number) => (
+                          <div
+                            key={index}
+                            className="p-3 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"
+                          >
+                            <p className="text-white font-mono text-sm">{query}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Search Strategies */}
+                  {recommendations.strategies && recommendations.strategies.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <TrendingUp className="w-5 h-5 text-green-400" />
+                        <h3 className="text-lg font-semibold text-white">Search Strategies</h3>
+                      </div>
+                      <div className="space-y-3">
+                        {recommendations.strategies.map((strategy: any, index: number) => (
+                          <div
+                            key={index}
+                            className="p-4 bg-white/5 border border-white/10 rounded-lg"
+                          >
+                            <h4 className="text-white font-semibold mb-2">{strategy.title}</h4>
+                            <p className="text-gray-400 text-sm">{strategy.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Key Skills to Highlight */}
+                  {recommendations.key_skills && recommendations.key_skills.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Sparkles className="w-5 h-5 text-green-400" />
+                        <h3 className="text-lg font-semibold text-white">Key Skills to Highlight</h3>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {recommendations.key_skills.map((skill: string, index: number) => (
+                          <span
+                            key={index}
+                            className="px-3 py-1 bg-green-500/20 text-green-400 border border-green-500/30 rounded-full text-sm"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center text-gray-400">
+                  <p>No recommendations available</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
