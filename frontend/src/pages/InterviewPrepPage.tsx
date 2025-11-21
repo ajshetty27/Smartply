@@ -173,34 +173,47 @@ export default function InterviewPrepPage() {
     const decoder = new TextDecoder();
     
     if (reader) {
+      let buffer = '';
+      
       // Collect all chunks first
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        
+        // Keep the last incomplete line in the buffer
+        buffer = lines.pop() || '';
         
         for (const line of lines) {
           if (line.startsWith('data: ')) {
-            const data = JSON.parse(line.slice(6));
-            
-            if (data.done) {
-              break;
-            }
-            
-            if (data.transcript) {
-              transcriptChunks.push(data.transcript);
-              fullTranscript += data.transcript;
-            }
-            
-            if (data.audio) {
-              const audioData = atob(data.audio);
-              const bytes = new Uint8Array(audioData.length);
-              for (let i = 0; i < audioData.length; i++) {
-                bytes[i] = audioData.charCodeAt(i);
+            try {
+              const jsonStr = line.slice(6).trim();
+              if (!jsonStr) continue;
+              
+              const data = JSON.parse(jsonStr);
+              
+              if (data.done) {
+                break;
               }
-              pcmChunks.push(bytes.buffer);
+              
+              if (data.transcript) {
+                transcriptChunks.push(data.transcript);
+                fullTranscript += data.transcript;
+              }
+              
+              if (data.audio) {
+                const audioData = atob(data.audio);
+                const bytes = new Uint8Array(audioData.length);
+                for (let i = 0; i < audioData.length; i++) {
+                  bytes[i] = audioData.charCodeAt(i);
+                }
+                pcmChunks.push(bytes.buffer);
+              }
+            } catch (e) {
+              console.error('Error parsing SSE data:', e);
+              // Skip malformed JSON chunks
             }
           }
         }
