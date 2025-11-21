@@ -1,5 +1,6 @@
 import os
 import requests
+import json
 from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -80,7 +81,6 @@ async def start_interview(
         raise HTTPException(status_code=404, detail="Session not found")
     
     # Get context
-    import json
     job = None
     if session.job_id:
         job = db.query(Job).filter(Job.id == session.job_id).first()
@@ -171,15 +171,16 @@ async def start_interview(
                             if transcript_piece:
                                 full_transcript.append(transcript_piece)
                             
-                            yield (
-                                "data: "
-                                + json.dumps({
+                            try:
+                                response_data = {
                                     "transcript": transcript_piece,
                                     "audio": audio_base64,
                                     "done": False
-                                })
-                                + "\n\n"
-                            )
+                                }
+                                yield f"data: {json.dumps(response_data, ensure_ascii=False)}\n\n"
+                            except Exception as e:
+                                print(f"Error encoding response: {e}")
+                                continue
                     except json.JSONDecodeError:
                         continue
     
@@ -220,7 +221,6 @@ async def interview_chat(
         db.commit()
     
     # Load or initialize conversation history
-    import json
     if session.conversation_history:
         messages = json.loads(session.conversation_history)
     else:
@@ -364,15 +364,16 @@ async def interview_chat(
                                     full_transcript.append(transcript_piece)
                                 
                                 # Send chunk to frontend
-                                yield (
-                                    "data: "
-                                    + json.dumps({
+                                try:
+                                    response_data = {
                                         "transcript": transcript_piece,
                                         "audio": audio_base64,
                                         "done": False
-                                    })
-                                    + "\n\n"
-                                )
+                                    }
+                                    yield f"data: {json.dumps(response_data, ensure_ascii=False)}\n\n"
+                                except Exception as e:
+                                    print(f"Error encoding response: {e}")
+                                    continue
                         except json.JSONDecodeError:
                             continue
         
