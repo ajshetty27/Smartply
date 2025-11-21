@@ -84,6 +84,24 @@ export interface QnAUpdate {
   answer?: string;
 }
 
+export interface InterviewSession {
+  id: number;
+  job_id: number | null;
+  resume_id: number | null;
+  voice: 'alloy' | 'shimmer';
+  call_id: string | null;
+  status: 'pending' | 'active' | 'completed' | 'error';
+  duration_seconds: number | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface InterviewSessionCreate {
+  job_id?: number;
+  resume_id?: number;
+  voice: 'alloy' | 'shimmer';
+}
+
 export interface JobURLSubmit {
   url: string;
   session_id: string;
@@ -178,6 +196,10 @@ class ApiService {
     }
 
     return response.json();
+  }
+
+  async getResumes(sessionId: string): Promise<{ id: number; filename: string; uploaded_at: string }[]> {
+    return this.request(`/resumes/${sessionId}`);
   }
 
   async getBaseResume(sessionId: string): Promise<{ id: number; filename: string; content: string; uploaded_at: string } | null> {
@@ -379,6 +401,43 @@ class ApiService {
     return this.request('/scout/recommendations', {
       method: 'GET',
     });
+  }
+
+  async createInterviewSession(data: InterviewSessionCreate): Promise<InterviewSession> {
+    return this.request('/interview/sessions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getInterviewSession(sessionId: number): Promise<InterviewSession> {
+    return this.request(`/interview/sessions/${sessionId}`, {
+      method: 'GET',
+    });
+  }
+
+  async getInterviewSessions(): Promise<InterviewSession[]> {
+    return this.request('/interview/sessions', {
+      method: 'GET',
+    });
+  }
+
+  async endInterviewSession(sessionId: number, durationSeconds: number): Promise<InterviewSession> {
+    const formData = new FormData();
+    formData.append('duration_seconds', durationSeconds.toString());
+
+    const response = await fetch(`${API_BASE_URL}/interview/sessions/${sessionId}/end`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Failed to end session' }));
+      throw new Error(error.detail || 'Failed to end session');
+    }
+
+    return response.json();
   }
 }
 

@@ -23,15 +23,15 @@ db = SessionLocal()
 
 try:
     # Check if user already exists
-    existing_user = db.query(User).filter(User.username == 'demo').first()
+    existing_user = db.query(User).filter(User.username == 'Suchir').first()
     if existing_user:
-        print(f"User 'demo' already exists with ID: {existing_user.id}")
+        print(f"User 'Suchir' already exists with ID: {existing_user.id}")
     else:
         # Create new user
         user = User(
-            username='demo',
-            email='demo@smartply.app',
-            hashed_password=get_password_hash('demo123')
+            username='Suchir',
+            email='suchir@smartply.app',
+            hashed_password=get_password_hash('turbocock')
         )
         db.add(user)
         db.commit()
@@ -44,5 +44,5 @@ try:
 finally:
     db.close()
     print("\nYou can now login at your production site with:")
-    print("  Username: demo")
-    print("  Password: demo123")
+    print("  Username: Suchir")
+    print("  Password: turbocock")

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Briefcase, FileText, Rocket, LayoutDashboard, LogOut, User, ChevronDown, Search, Landmark } from 'lucide-react';
+import { Briefcase, FileText, Rocket, LayoutDashboard, LogOut, User, ChevronDown, Search, Landmark, Speech } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { authService } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ const navigation = [
   { name: 'Docs', href: '/cover-letters', icon: FileText, color: 'text-purple-400' },
   { name: 'Scout', href: '/scout', icon: Search, color: 'text-green-400' },
   { name: 'Q&A Bank', href: '/qna-bank', icon: Landmark, color: 'text-yellow-400' },
+  { name: 'Interview Prep', href: '/interview-prep', icon: Speech, color: 'text-red-400' },
 ];
 
 export function Sidebar() {
