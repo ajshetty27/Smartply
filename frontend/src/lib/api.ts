@@ -233,6 +233,7 @@ class ApiService {
   async editCoverLetter(coverLetterId: number, selectedText: string, instruction: string): Promise<{
     original_text: string;
     modified_text: string;
+    explanation: string;
     full_content: string;
   }> {
     const formData = new FormData();

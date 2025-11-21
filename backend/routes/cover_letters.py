@@ -354,24 +354,41 @@ async def edit_cover_letter(
         if not cover_letter:
             raise HTTPException(status_code=404, detail="Cover letter not found")
         
-                # Call GPT-4 for editing (GPT-5 not yet available)
+        # Call GPT-4 for editing with explanation
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {
                     "role": "system",
-                    "content": "You are editing a cover letter. Modify only the selected text based on the user's instruction. Return ONLY the modified text, nothing else."
+                    "content": """You are editing a cover letter. Modify the selected text based on the user's instruction and provide an explanation.
+
+Return ONLY in this exact JSON format:
+{
+  "modified_text": "the updated text here",
+  "explanation": "brief explanation of what was changed and why (1-2 sentences)"
+}"""
                 },
                 {
                     "role": "user",
-                    "content": f"Original text: {selected_text}\n\nInstruction: {instruction}\n\nProvide the modified text:"
+                    "content": f"Original text: {selected_text}\n\nInstruction: {instruction}\n\nProvide the modified text and explanation:"
                 }
             ],
             temperature=0.7,
             max_tokens=500
         )
         
-        modified_text = response.choices[0].message.content.strip()
+        import json
+        response_content = response.choices[0].message.content.strip()
+        
+        # Extract JSON from response (handle markdown code blocks)
+        if "```json" in response_content:
+            response_content = response_content.split("```json")[1].split("```")[0].strip()
+        elif "```" in response_content:
+            response_content = response_content.split("```")[1].split("```")[0].strip()
+        
+        result = json.loads(response_content)
+        modified_text = result["modified_text"]
+        explanation = result.get("explanation", "Text updated successfully")
         
         # Normalize whitespace for better matching
         import re
@@ -399,6 +416,7 @@ async def edit_cover_letter(
         return {
             "original_text": selected_text,
             "modified_text": modified_text,
+            "explanation": explanation,
             "full_content": updated_content
         }
         

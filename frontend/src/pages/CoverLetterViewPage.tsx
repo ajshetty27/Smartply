@@ -1,35 +1,42 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Download, Send, Sparkles, Loader2, X, FileText, Lightbulb, AlertCircle, Plus, Edit, Trash } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { 
+  ArrowLeft, 
+  Download, 
+  Sparkles, 
+  Loader2, 
+  Lightbulb, 
+  AlertCircle, 
+  Plus, 
+  Edit, 
+  Trash,
+  CheckCircle
+} from 'lucide-react';
 import { apiService, ResumeModification } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  selectedText?: string;
-}
 
 export function CoverLetterViewPage() {
   const { jobId } = useParams<{ jobId: string }>(); // Note: despite the name, this is the cover letter ID
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [chatMessage, setChatMessage] = useState('');
-  const [selectedText, setSelectedText] = useState('');
+  const contentRef = useRef<HTMLDivElement>(null);
+  
   const [coverLetterContent, setCoverLetterContent] = useState('');
   const [resumeModifications, setResumeModifications] = useState<ResumeModification[] | null>(null);
   const [coverLetterId, setCoverLetterId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
-  const [editingParagraphIndex, setEditingParagraphIndex] = useState<number | null>(null);
-  const [editedText, setEditedText] = useState('');
   const [activeTab, setActiveTab] = useState<string>('cover-letter');
+  
+  // AI Edit states
+  const [aiInstruction, setAiInstruction] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
   const [highlightedText, setHighlightedText] = useState<string>('');
+  const [aiExplanation, setAiExplanation] = useState<string>('');
+  const [selectedText, setSelectedText] = useState('');
 
   useEffect(() => {
     const loadCoverLetter = async () => {
@@ -58,66 +65,67 @@ export function CoverLetterViewPage() {
     loadCoverLetter();
   }, [jobId, navigate, toast]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-      </div>
-    );
-  }
-
+  // Handle text selection
   const handleTextSelection = () => {
     const selection = window.getSelection();
     if (selection && selection.toString().length > 0) {
-      setSelectedText(selection.toString());
+      setSelectedText(selection.toString().trim());
+    } else {
+      setSelectedText('');
     }
   };
 
-  const handleClearSelection = () => {
-    setSelectedText('');
-    window.getSelection()?.removeAllRanges();
+  // Handle content changes (manual typing)
+  const handleContentChange = () => {
+    if (contentRef.current) {
+      setCoverLetterContent(contentRef.current.innerText);
+    }
   };
 
-  const handleSendMessage = async () => {
-    if (!coverLetterId || !selectedText || !chatMessage.trim()) return;
-
-    // Add user message to chat history
-    const userMessage: ChatMessage = {
-      role: 'user',
-      content: chatMessage,
-      selectedText: selectedText,
-    };
-    setChatHistory((prev) => [...prev, userMessage]);
+  // Handle AI edit
+  const handleAiEdit = async () => {
+    if (!coverLetterId || !selectedText || !aiInstruction.trim()) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please select text and provide an instruction',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setIsEditing(true);
+    setAiExplanation('');
+    
     try {
       const result = await apiService.editCoverLetter(
         coverLetterId,
         selectedText,
-        chatMessage
+        aiInstruction
       );
       
-      // Add assistant response to chat history
-      const assistantMessage: ChatMessage = {
-        role: 'assistant',
-        content: result.modified_text,
-      };
-      setChatHistory((prev) => [...prev, assistantMessage]);
-      
+      // Update content
       setCoverLetterContent(result.full_content);
+      if (contentRef.current) {
+        contentRef.current.innerText = result.full_content;
+      }
       
-      // Highlight the new text
+      // Show explanation
+      setAiExplanation(result.explanation || 'Text updated successfully');
+      
+      // Highlight the modified text for 10 seconds
       setHighlightedText(result.modified_text);
       setTimeout(() => {
         setHighlightedText('');
-      }, 5000);
+      }, 10000);
       
-      setChatMessage('');
+      // Clear inputs
+      setAiInstruction('');
       setSelectedText('');
+      window.getSelection()?.removeAllRanges();
       
       toast({
         title: 'Success',
-        description: 'Cover letter updated successfully',
+        description: 'Cover letter updated',
       });
     } catch (error) {
       toast({
@@ -143,7 +151,6 @@ export function CoverLetterViewPage() {
     try {
       const blob = await apiService.downloadCoverLetterPDF(coverLetterId);
       
-      // Create download link
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -166,315 +173,222 @@ export function CoverLetterViewPage() {
     }
   };
 
-  const handleParagraphClick = (index: number, text: string) => {
-    setEditingParagraphIndex(index);
-    setEditedText(text);
+  // Render content with highlighting
+  const renderContent = () => {
+    if (!highlightedText) {
+      return coverLetterContent;
+    }
+
+    // Split by highlighted text and wrap it
+    const parts = coverLetterContent.split(highlightedText);
+    return parts.map((part, index) => (
+      <span key={index}>
+        {part}
+        {index < parts.length - 1 && (
+          <span className="bg-green-500/30 animate-pulse rounded px-1">
+            {highlightedText}
+          </span>
+        )}
+      </span>
+    ));
   };
 
-  const handleCancelEdit = () => {
-    setEditingParagraphIndex(null);
-    setEditedText('');
-  };
-
-  const handleSaveEdit = () => {
-    if (editingParagraphIndex === null) return;
-    
-    const paragraphs = coverLetterContent.split('\n\n');
-    paragraphs[editingParagraphIndex] = editedText;
-    setCoverLetterContent(paragraphs.join('\n\n'));
-    
-    setEditingParagraphIndex(null);
-    setEditedText('');
-    
-    toast({
-      title: 'Success',
-      description: 'Paragraph updated',
-    });
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full bg-black">
+        <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full flex">
+    <div className="h-full flex bg-black">
       {/* Main Content */}
-      <div className="flex-1 p-8 overflow-y-auto bg-black">
+      <div className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <Button
               variant="ghost"
-              onClick={() => navigate('/cover-letters')}
-              className="gap-2 text-white"
+              onClick={() => navigate('/docs')}
+              className="gap-2 text-gray-400 hover:text-white"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Docs
             </Button>
             <Button
               onClick={handleDownloadPDF}
-              className="gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+              className="gap-2 bg-purple-600 hover:bg-purple-700"
             >
               <Download className="w-4 h-4" />
               Download PDF
             </Button>
           </div>
 
-          {/* Tabs for Cover Letter and Resume Modifications */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-white/5">
-              <TabsTrigger value="cover-letter" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white gap-2">
-                <FileText className="w-4 h-4" />
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="bg-black/40 border border-white/10">
+              <TabsTrigger value="cover-letter" className="data-[state=active]:bg-purple-600">
+                <Edit className="w-4 h-4 mr-2" />
                 Cover Letter
               </TabsTrigger>
-              <TabsTrigger value="resume-mods" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white gap-2">
-                <Lightbulb className="w-4 h-4" />
+              <TabsTrigger value="resume-suggestions" className="data-[state=active]:bg-purple-600">
+                <Lightbulb className="w-4 h-4 mr-2" />
                 Resume Suggestions
-                {resumeModifications && resumeModifications.length > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 text-xs bg-blue-500 rounded-full">
-                    {resumeModifications.length}
-                  </span>
-                )}
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="cover-letter" className="mt-6">
-          {/* Cover Letter */}
-          <Card className="p-8 md:p-12">
-            <div
-              className="prose prose-invert max-w-none"
-              onMouseUp={handleTextSelection}
-              style={{
-                fontFamily: 'Georgia, serif',
-                lineHeight: '1.8',
-                fontSize: '16px',
-              }}
-            >
-              {coverLetterContent.split('\n\n').map((paragraph, index) => (
-                <div key={index} className="mb-4">
-                  {editingParagraphIndex === index ? (
-                    <div className="space-y-2">
-                      <Textarea
-                        value={editedText}
-                        onChange={(e) => setEditedText(e.target.value)}
-                        className="min-h-[100px] bg-white/5 border-white/20 text-white"
-                        autoFocus
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          onClick={handleSaveEdit}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          Save
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={handleCancelEdit}
-                          className="border-white/20 text-white hover:bg-white/10"
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <p
-                      className={`text-gray-200 cursor-pointer hover:bg-white/5 rounded px-2 py-1 transition-all ${
-                        highlightedText && paragraph.includes(highlightedText)
-                          ? 'bg-green-500/30 animate-pulse'
-                          : ''
-                      }`}
-                      onClick={() => handleParagraphClick(index, paragraph)}
-                      title="Click to edit"
-                    >
-                      {paragraph}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </Card>
-            </TabsContent>
-
-            <TabsContent value="resume-mods" className="mt-6">
-              <Card className="p-8 bg-black/40 backdrop-blur-xl border-white/10">
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between mb-6">
+            {/* Cover Letter Tab */}
+            <TabsContent value="cover-letter" className="space-y-4 mt-6">
+              {/* AI Explanation Banner */}
+              {aiExplanation && (
+                <Card className="bg-green-500/10 border-green-500/30 p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
                     <div>
-                      <h3 className="text-2xl font-bold text-white mb-2">Resume Modification Suggestions</h3>
-                      <p className="text-gray-400">
-                        AI-generated suggestions to tailor your resume for this specific job
-                      </p>
+                      <h4 className="text-white font-semibold mb-1">AI Edit Applied</h4>
+                      <p className="text-gray-300 text-sm">{aiExplanation}</p>
                     </div>
                   </div>
+                </Card>
+              )}
 
-                  {resumeModifications && resumeModifications.length > 0 ? (
-                    <div className="space-y-4">
-                      {resumeModifications.map((mod, index) => {
-                        const getTypeIcon = (type: string) => {
-                          switch (type) {
-                            case 'add':
-                              return <Plus className="w-5 h-5 text-green-400" />;
-                            case 'modify':
-                              return <Edit className="w-5 h-5 text-blue-400" />;
-                            case 'remove':
-                              return <Trash className="w-5 h-5 text-red-400" />;
-                            case 'highlight':
-                              return <Sparkles className="w-5 h-5 text-yellow-400" />;
-                            default:
-                              return <AlertCircle className="w-5 h-5 text-gray-400" />;
-                          }
-                        };
-
-                        const getTypeColor = (type: string) => {
-                          switch (type) {
-                            case 'add':
-                              return 'border-green-500/30 bg-green-500/10';
-                            case 'modify':
-                              return 'border-blue-500/30 bg-blue-500/10';
-                            case 'remove':
-                              return 'border-red-500/30 bg-red-500/10';
-                            case 'highlight':
-                              return 'border-yellow-500/30 bg-yellow-500/10';
-                            default:
-                              return 'border-gray-500/30 bg-gray-500/10';
-                          }
-                        };
-
-                        return (
-                          <div
-                            key={index}
-                            className={`p-4 border rounded-lg ${getTypeColor(mod.type)}`}
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="mt-1">{getTypeIcon(mod.type)}</div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <span className="font-semibold text-white capitalize">
-                                    {mod.type}
-                                  </span>
-                                  <span className="text-gray-400">•</span>
-                                  <span className="text-gray-300">{mod.section}</span>
-                                </div>
-                                <p className="text-white mb-2 font-medium">{mod.suggestion}</p>
-                                <p className="text-gray-400 text-sm">{mod.reason}</p>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <Lightbulb className="w-16 h-16 mx-auto text-gray-600 mb-4" />
-                      <h3 className="text-xl font-semibold text-white mb-2">
-                        No Suggestions Available
-                      </h3>
-                      <p className="text-gray-400">
-                        Resume modification suggestions will appear here after document generation
-                      </p>
-                    </div>
-                  )}
+              {/* Editable Cover Letter */}
+              <Card className="bg-white p-12 min-h-[800px] shadow-xl">
+                <div
+                  ref={contentRef}
+                  contentEditable={!isEditing}
+                  suppressContentEditableWarning
+                  onInput={handleContentChange}
+                  onMouseUp={handleTextSelection}
+                  onKeyUp={handleTextSelection}
+                  className="outline-none text-gray-900 whitespace-pre-wrap font-serif text-base leading-relaxed focus:ring-2 focus:ring-purple-500/20 rounded p-4"
+                  style={{
+                    fontFamily: '"Times New Roman", Times, serif',
+                    fontSize: '12pt',
+                    lineHeight: '1.8',
+                  }}
+                >
+                  {highlightedText ? renderContent() : coverLetterContent}
                 </div>
               </Card>
+            </TabsContent>
+
+            {/* Resume Suggestions Tab */}
+            <TabsContent value="resume-suggestions" className="mt-6">
+              {!resumeModifications || resumeModifications.length === 0 ? (
+                <Card className="bg-black/40 backdrop-blur-xl border-white/10 p-12 text-center">
+                  <AlertCircle className="w-12 h-12 mx-auto text-gray-600 mb-4" />
+                  <p className="text-gray-400">No resume modifications suggested</p>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {resumeModifications.map((mod, index) => (
+                    <Card key={index} className="bg-black/40 backdrop-blur-xl border-white/10 p-6">
+                      <div className="flex items-start gap-4">
+                        <div className={`p-2 rounded-lg ${
+                          mod.type === 'add' ? 'bg-green-500/20' :
+                          mod.type === 'modify' ? 'bg-blue-500/20' :
+                          mod.type === 'remove' ? 'bg-red-500/20' :
+                          'bg-yellow-500/20'
+                        }`}>
+                          {mod.type === 'add' ? <Plus className="w-5 h-5 text-green-400" /> :
+                           mod.type === 'modify' ? <Edit className="w-5 h-5 text-blue-400" /> :
+                           mod.type === 'remove' ? <Trash className="w-5 h-5 text-red-400" /> :
+                           <Sparkles className="w-5 h-5 text-yellow-400" />}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-sm font-semibold text-purple-400 uppercase">
+                              {mod.section}
+                            </span>
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              mod.type === 'add' ? 'bg-green-500/20 text-green-400' :
+                              mod.type === 'modify' ? 'bg-blue-500/20 text-blue-400' :
+                              mod.type === 'remove' ? 'bg-red-500/20 text-red-400' :
+                              'bg-yellow-500/20 text-yellow-400'
+                            }`}>
+                              {mod.type}
+                            </span>
+                          </div>
+                          <p className="text-white mb-2">{mod.suggestion}</p>
+                          <p className="text-sm text-gray-400 italic">{mod.reason}</p>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>
       </div>
 
-      {/* Sidebar - Chat */}
-      <div className="w-96 border-l border-white/10 bg-black/20 backdrop-blur-xl flex flex-col">
-        <div className="p-6 border-b border-white/10">
+      {/* AI Edit Sidebar */}
+      <div className="w-96 border-l border-white/10 bg-black/40 backdrop-blur-xl p-6 space-y-6">
+        <div>
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="w-5 h-5 text-purple-400" />
-            <h3 className="font-semibold text-white">AI Assistant</h3>
+            <h3 className="text-lg font-semibold text-white">AI Editor</h3>
           </div>
           <p className="text-sm text-gray-400">
-            Highlight text and chat to refine your cover letter
+            Select text in the document and tell me what to change
           </p>
         </div>
 
         {/* Selected Text Display */}
         {selectedText && (
-          <div className="p-4 mx-4 mt-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <p className="text-xs text-purple-400">Selected Text:</p>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleClearSelection}
-                className="h-5 w-5 text-gray-400 hover:text-white"
-              >
-                <X className="w-3 h-3" />
-              </Button>
-            </div>
-            <p className="text-sm text-gray-300 line-clamp-3">{selectedText}</p>
-          </div>
+          <Card className="bg-purple-500/10 border-purple-500/30 p-4">
+            <p className="text-xs text-purple-400 mb-1 font-semibold">SELECTED TEXT:</p>
+            <p className="text-white text-sm italic">"{selectedText}"</p>
+          </Card>
         )}
 
-        {/* Chat Messages Area */}
-        <div className="flex-1 p-4 overflow-y-auto">
-          <div className="space-y-4">
-            {chatHistory.length === 0 ? (
-              <div className="text-center text-sm text-gray-500 py-8">
-                Select text in the cover letter and ask me to make changes
-              </div>
+        {/* AI Instruction Input */}
+        <div className="space-y-3">
+          <label className="text-sm text-gray-300 font-medium">
+            What would you like to change?
+          </label>
+          <Input
+            value={aiInstruction}
+            onChange={(e) => setAiInstruction(e.target.value)}
+            placeholder="e.g., Make it more professional, add excitement, shorten this..."
+            className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleAiEdit();
+              }
+            }}
+          />
+          <Button
+            onClick={handleAiEdit}
+            disabled={isEditing || !selectedText || !aiInstruction.trim()}
+            className="w-full gap-2 bg-purple-600 hover:bg-purple-700"
+          >
+            {isEditing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Editing...
+              </>
             ) : (
-              chatHistory.map((message, index) => (
-                <div
-                  key={index}
-                  className={`p-3 rounded-lg ${
-                    message.role === 'user'
-                      ? 'bg-purple-500/10 border border-purple-500/20'
-                      : 'bg-white/5 border border-white/10'
-                  }`}
-                >
-                  <p className="text-xs font-semibold mb-1 text-purple-400">
-                    {message.role === 'user' ? 'You' : 'AI Assistant'}
-                  </p>
-                  {message.selectedText && (
-                    <div className="mb-2 p-2 bg-black/30 rounded text-xs text-gray-400 italic">
-                      "{message.selectedText.substring(0, 100)}
-                      {message.selectedText.length > 100 ? '...' : ''}"
-                    </div>
-                  )}
-                  <p className="text-sm text-gray-200">{message.content}</p>
-                </div>
-              ))
+              <>
+                <Sparkles className="w-4 h-4" />
+                Apply AI Edit
+              </>
             )}
-          </div>
+          </Button>
         </div>
 
-        {/* Chat Input */}
-        <div className="p-4 border-t border-white/10">
-          <div className="space-y-2">
-            <Textarea
-              placeholder={
-                selectedText
-                  ? 'How would you like to modify the selected text?'
-                  : 'Select text first, then describe your changes...'
-              }
-              value={chatMessage}
-              onChange={(e) => setChatMessage(e.target.value)}
-              rows={3}
-              disabled={!selectedText}
-            />
-            <Button
-              onClick={handleSendMessage}
-              disabled={!chatMessage.trim() || !selectedText || isEditing}
-              className="w-full gap-2 bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              {isEditing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Editing...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  Send Message
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
+        {/* Tips */}
+        <Card className="bg-white/5 border-white/10 p-4">
+          <p className="text-xs text-purple-400 mb-2 font-semibold">💡 QUICK TIPS</p>
+          <ul className="text-xs text-gray-400 space-y-2">
+            <li>• Select any text to edit it</li>
+            <li>• Click and type to edit directly</li>
+            <li>• AI highlights changes for 10 seconds</li>
+            <li>• Changes auto-save to your document</li>
+          </ul>
+        </Card>
       </div>
     </div>
   );
